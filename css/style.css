@@ -202,9 +202,11 @@ kbd {
 .sb-team.p1 { border-radius: 10px 0 0 10px; padding-left: 14px; }
 .sb-team.p2 { border-radius: 0 10px 10px 0; padding-right: 14px; }
 .sb-name { display: flex; align-items: center; padding: 0 16px; font: italic 800 14px var(--font); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
-.sb-pts { display: grid; place-items: center; width: 70px; font: italic 900 36px/1 var(--font); color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
-.p1 .sb-pts { background: var(--team1, var(--sky)); box-shadow: inset 0 -8px 0 rgba(0,0,0,.12); }
-.p2 .sb-pts { background: var(--team2, var(--pink)); box-shadow: inset 0 -8px 0 rgba(0,0,0,.12); }
+.sb-pts { position: relative; isolation: isolate; display: grid; place-items: center; width: 70px; font: italic 900 36px/1 var(--font); color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
+/* el número va recto, pero su fondo se inclina igual que el resto del marcador para que los bordes encajen */
+.sb-pts::before { content: ""; position: absolute; inset: 0; z-index: -1; transform: skewX(var(--skew)); box-shadow: inset 0 -8px 0 rgba(0,0,0,.12); }
+.p1 .sb-pts::before { background: var(--team1, var(--sky)); }
+.p2 .sb-pts::before { background: var(--team2, var(--pink)); }
 .sb-pts.bump { animation: bump .5s var(--pop); }
 .sb-mid { display: grid; place-items: center; padding: 0 14px; background: var(--paper); color: var(--ink); font: 800 11px var(--font); letter-spacing: .16em; text-transform: uppercase; transform: skewX(var(--skew)); border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); }
 .sb-mid span { transform: skewX(12deg); }
