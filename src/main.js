@@ -629,6 +629,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// El juego nunca debe desplazarse (el navegador lo intenta al enfocar botones fuera de vista)
+document.addEventListener('scroll', e => { const t = e.target; if (t === document) { if (scrollX || scrollY) scrollTo(0, 0); } else if (t.id === 'menu' && t.scrollTop) t.scrollTop = 0; }, true);
 window.addEventListener('error', e => { const el = $('err'); el.textContent = 'Error: ' + e.message; el.classList.remove('hidden'); });
 setSfxEnabled(false);
 rebuildPlayer();

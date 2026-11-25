@@ -425,3 +425,35 @@ kbd {
 #netTag.slow i { background: var(--sun); } #netTag.bad i { background: var(--coral); }
 .sheet-text.small { font-size: 13px; color: rgba(255,255,255,.65); margin: 4px 0 0; }
 .mbtn.waiting span::after { content: " · esperando rival"; font-size: 13px; opacity: .7; }
+
+/* ---------- Menú compacto en pantallas bajas (nunca debe desbordar) ---------- */
+#menu { overflow: hidden; }
+@media (max-height: 860px) {
+  #menu { padding-top: 18px; padding-bottom: 14px; }
+  .menu-left { gap: 14px; }
+  .logo-top { font-size: 30px; }
+  .logo-main { font-size: 84px; }
+  .logo-tag { margin-top: 8px; }
+  .logo-tag span { font-size: 11px; padding: 5px 13px 6px; }
+  #nav { gap: 2px; }
+  .nav-item { padding: 7px 20px 8px 12px; gap: 12px; grid-template-columns: 38px 1fr auto; }
+  .nav-ico { width: 38px; height: 38px; border-radius: 10px; }
+  .nav-ico svg { width: 19px; height: 19px; }
+  .nav-txt .lbl { font-size: 24px; }
+  .nav-txt .sub { font-size: 12px; }
+}
+@media (max-height: 720px) {
+  .logo-top { font-size: 24px; }
+  .logo-main { font-size: 64px; }
+  .logo-tag { display: none; }
+  .nav-item { padding: 5px 18px 6px 10px; }
+  .nav-ico { width: 32px; height: 32px; }
+  .nav-txt .lbl { font-size: 20px; }
+  .nav-txt .sub { display: none; }
+  .prompts { font-size: 11px; }
+  .menu-panel .card { max-height: calc(100vh - 110px); overflow-y: auto; }
+}
+@media (max-height: 600px) {
+  .logo { display: none; }
+  .prompts { display: none; }
+}

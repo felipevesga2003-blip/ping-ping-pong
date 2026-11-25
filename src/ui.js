@@ -68,7 +68,8 @@ function renderHelp() {
     </div>`;
 }
 
-const NAV = ['play', 'char', 'style', 'rules', 'help'];
+// El orden sale del propio HTML (así añadir una sección nunca desincroniza menú y paneles)
+const NAV = [...document.querySelectorAll('.nav-item')].map(el => el.dataset.id);
 const LOOK_OPTS = { height: HEIGHTS, width: WIDTHS, shirt: SHIRTS, hat: HATS, glasses: GLASSES };
 
 export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane }) {
