@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ping Ping Pong</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='42' fill='%23ffb020' stroke='%231a1238' stroke-width='10'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script>
+  // Diagnóstico temprano: muestra cualquier error de carga en pantalla
+  window.__pppErrors = [];
+  function __pppReport(msg) {
+    window.__pppErrors.push(msg);
+    var el = document.getElementById('err');
+    if (el) { el.textContent = 'No se pudo iniciar el juego: ' + window.__pppErrors.join(' | '); el.classList.remove('hidden'); }
+  }
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t !== window && (t.src || t.href)) { if (!/fonts\.g/.test(t.href || '')) __pppReport('no se pudo cargar ' + (t.src || t.href)); }
+    else __pppReport(e.message + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) { __pppReport(String(e.reason && e.reason.message || e.reason)); });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (window.__ppp || location.protocol === 'file:') return;
+      var gl = null;
+      try { var c = document.createElement('canvas'); gl = c.getContext('webgl2') || c.getContext('webgl'); } catch (err) {}
+      if (!gl) __pppReport('tu navegador no tiene WebGL activo (activa la aceleración por hardware)');
+      else if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('importmap')) __pppReport('navegador demasiado antiguo; usa Chrome o Edge actualizados');
+      else if (!window.__pppErrors.length) __pppReport('el código del juego no arrancó (revisa la consola con F12)');
+    }, 4000);
+  });
+</script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<canvas id="overlay"></canvas>
+
+<!-- SVG reutilizables -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-bean" viewBox="0 0 120 150">
+      <path d="M60 10c27 0 45 19 45 46v46c0 22-18 38-45 38S15 124 15 102V56c0-27 18-46 45-46z" fill="currentColor" stroke="#1a1238" stroke-width="7"/>
+      <ellipse cx="60" cy="104" rx="27" ry="24" fill="#fff" opacity=".35"/>
+      <circle cx="44" cy="54" r="13" fill="#fff" stroke="#1a1238" stroke-width="4"/>
+      <circle cx="76" cy="54" r="13" fill="#fff" stroke="#1a1238" stroke-width="4"/>
+      <circle cx="47" cy="56" r="6.5" fill="#1a1238"/><circle cx="79" cy="56" r="6.5" fill="#1a1238"/>
+      <circle cx="49" cy="53" r="2.2" fill="#fff"/><circle cx="81" cy="53" r="2.2" fill="#fff"/>
+      <ellipse cx="33" cy="74" rx="7" ry="4.5" fill="#ff8fab" opacity=".8"/><ellipse cx="87" cy="74" rx="7" ry="4.5" fill="#ff8fab" opacity=".8"/>
+      <path d="M52 76q8 8 16 0" fill="none" stroke="#1a1238" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M60 10c0-6 3-9 8-10" fill="none" stroke="#2e8a46" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="72" cy="0" rx="11" ry="5" fill="#5fd36e" stroke="#1a1238" stroke-width="3" transform="rotate(-20 72 0)"/>
+    </symbol>
+    <symbol id="i-char" viewBox="0 0 24 24"><path d="M12 2.5c4.2 0 6.8 3 6.8 7.2v5.6c0 3.6-2.9 6.2-6.8 6.2s-6.8-2.6-6.8-6.2V9.7C5.2 5.5 7.8 2.5 12 2.5z" fill="currentColor"/><circle cx="9.6" cy="9.6" r="1.6" fill="#1a1238"/><circle cx="14.4" cy="9.6" r="1.6" fill="#1a1238"/></symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="8.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-online" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M3.5 12h17M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-paddle" viewBox="0 0 24 24"><rect x="10.3" y="13" width="3.4" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="8.6" r="7" fill="currentColor"/><circle cx="9.6" cy="6.4" r="1.8" fill="#1a1238" opacity=".35"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 7h16M4 17h16"/></g><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.3 1-1.3 1.9v.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ================= MENÚ PRINCIPAL ================= -->
+<div id="menu" class="screen">
+  <div class="menu-shade"></div>
+  <div class="menu-stripes"></div>
+
+  <header class="menu-top">
+    <div class="season"><span class="dot"></span>Temporada 1 · Torneo del Parque</div>
+    <div class="top-right">
+      <button class="chip-btn" id="muteBtn"><svg><use href="#i-sound"/></svg><span id="muteLbl">Sonido</span></button>
+      <span class="build">v1.0</span>
+    </div>
+  </header>
+
+  <div class="menu-left">
+    <div class="logo">
+      <div class="logo-top">PING&nbsp;PING</div>
+      <div class="logo-main">
+        <span>P</span><span class="logo-o">
+          <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="#ffb020" stroke="#1a1238" stroke-width="8"/><path d="M12 44q38 24 76 0" fill="none" stroke="#e0601a" stroke-width="6" stroke-linecap="round"/><ellipse cx="35" cy="30" rx="13" ry="7" fill="#fff" opacity=".75" transform="rotate(-28 35 30)"/></svg>
+        </span><span>NG</span><span class="bang">!</span>
+      </div>
+      <div class="logo-tag"><span>Arcade Table Tennis</span></div>
+    </div>
+
+    <nav id="nav">
+      <button class="nav-item" data-id="play">
+        <span class="nav-ico"><svg><use href="#i-play"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Jugar</span><span class="sub">Partido rápido contra la CPU</span></span>
+        <span class="idx">01</span>
+      </button>
+      <button class="nav-item" data-id="online">
+        <span class="nav-ico"><svg><use href="#i-online"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Online</span><span class="sub" id="navOnline">Juega contra un amigo</span></span>
+        <span class="idx">02</span>
+      </button>
+      <button class="nav-item" data-id="char">
+        <span class="nav-ico"><svg><use href="#i-char"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Personaje</span><span class="sub" id="navChar">Tú · Camiseta</span></span>
+        <span class="idx">03</span>
+      </button>
+      <button class="nav-item" data-id="style">
+        <span class="nav-ico"><svg><use href="#i-paddle"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Estilo de juego</span><span class="sub" id="navStyle">Clásico</span></span>
+        <span class="idx">04</span>
+      </button>
+      <button class="nav-item" data-id="rules">
+        <span class="nav-ico"><svg><use href="#i-sliders"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Partido</span><span class="sub" id="navRules">Normal · a 11</span></span>
+        <span class="idx">05</span>
+      </button>
+      <button class="nav-item" data-id="help">
+        <span class="nav-ico"><svg><use href="#i-book"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Cómo jugar</span><span class="sub">Controles y técnicas</span></span>
+        <span class="idx">06</span>
+      </button>
+    </nav>
+  </div>
+
+  <section class="menu-panel">
+    <!-- JUGAR -->
+    <div class="pane" data-pane="play">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Modo</span><h3>Partido rápido</h3></div>
+        <div class="vs">
+          <div class="vs-side p1">
+            <svg class="bean" id="vsBean0" style="color:#4da8ff"><use href="#i-bean"/></svg>
+            <div class="vs-info"><b id="vsName0">Tú</b><span id="vsStyle">Clásico</span></div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="vs-side p2">
+            <div class="vs-info right"><b id="vsName1">CPU</b><span id="vsDiff">Normal</span><i class="meter" id="vsMeter"><i></i><i></i><i></i><i></i></i></div>
+            <svg class="bean" id="vsBean1" style="color:#ff6b8b"><use href="#i-bean"/></svg>
+          </div>
+        </div>
+        <div class="facts">
+          <div><span>Formato</span><b id="factTarget">Primero a 11</b></div>
+          <div><span>Desempate</span><b>Ventaja de 2</b></div>
+          <div><span>Movimiento</span><b id="factMove">Automático</b></div>
+        </div>
+        <button class="cta" id="playBtn"><span class="cta-txt">Empezar partido</span><kbd>Enter</kbd></button>
+      </div>
+    </div>
+
+    <!-- ONLINE -->
+    <div class="pane" data-pane="online">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Multijugador</span><h3>Jugar online</h3><span class="net-pill" id="netPill"><i></i><b>Sin conexión</b></span></div>
+        <div class="online-body">
+          <div class="on-grid" id="onChoose">
+            <div class="on-card">
+              <div class="on-tag">Anfitrión</div>
+              <b>Crear sala</b>
+              <p>Tu navegador hace de servidor. Te damos un código para tu rival.</p>
+              <button class="cta small" id="hostBtn"><span class="cta-txt">Crear sala</span></button>
+            </div>
+            <div class="on-card">
+              <div class="on-tag alt">Invitado</div>
+              <b>Unirse a sala</b>
+              <p>Escribe el código de 5 letras que te pasó tu rival.</p>
+              <div class="join-row"><input id="joinCode" maxlength="5" placeholder="CÓDIGO" spellcheck="false" autocomplete="off"><button class="join-btn" id="joinBtn">Entrar</button></div>
+            </div>
+          </div>
+          <div class="on-room hidden" id="onRoom">
+            <div class="room-code" id="roomCodeBox">
+              <span>Código de sala</span>
+              <b id="roomCode">· · · · ·</b>
+              <div class="room-actions"><button id="copyCode">Copiar código</button><button id="copyLink">Copiar enlace</button></div>
+            </div>
+            <div class="room-status" id="roomStatusBox"><i class="spinner"></i><span id="roomStatus">Creando sala…</span></div>
+            <div class="room-vs hidden" id="roomVs">
+              <div class="rv p1"><svg class="bean" id="rvBean0"><use href="#i-bean"/></svg><b id="rvName0">Tú</b></div>
+              <div class="vs-badge">VS</div>
+              <div class="rv p2"><svg class="bean" id="rvBean1"><use href="#i-bean"/></svg><b id="rvName1">Rival</b></div>
+            </div>
+            <button class="cta" id="onlineStart" hidden><span class="cta-txt">Empezar partido</span><kbd>Enter</kbd></button>
+            <button class="ghost-link" id="leaveRoom">Salir de la sala</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERSONAJE -->
+    <div class="pane" data-pane="char">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Vestuario</span><h3>Tu frijolito</h3>
+          <button class="dice-btn" id="randLook" title="Aspecto aleatorio"><svg><use href="#i-dice"/></svg>Sorpréndeme</button></div>
+        <div class="char-body">
+          <div class="name-row">
+            <label class="field grow"><span>Nombre</span><input id="lookName" maxlength="10" spellcheck="false" autocomplete="off"></label>
+            <label class="field num"><span>Dorsal</span><input id="lookNum" type="number" min="0" max="99"></label>
+          </div>
+          <div class="swatch-row"><span>Piel</span><div class="swatches" data-k="skin"></div></div>
+          <div class="swatch-row"><span>Equipación</span><div class="swatches" data-k="shirtColor"></div></div>
+          <div class="cgrid">
+            <div class="csel" data-k="height"><span>Altura</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
+            <div class="csel" data-k="width"><span>Complexión</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
+            <div class="csel" data-k="shirt"><span>Ropa</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
+            <div class="csel" data-k="hat"><span>Sombrero</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
+            <div class="csel" data-k="glasses"><span>Gafas</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
+            <div class="csel note"><span>Grada</span><div><i class="team-dot"></i><i class="team-dot t2"></i><em>Tu color y el de tu rival (opuesto)</em></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESTILO -->
+    <div class="pane" data-pane="style">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Controles</span><h3>Estilo de juego</h3></div>
+        <div class="styles">
+          <button class="style-card" data-v="classic">
+            <span class="sc-check"><svg><use href="#i-check"/></svg></span>
+            <div class="sc-art art-classic">
+              <svg viewBox="0 0 240 130">
+                <path d="M62 120 L96 30 H144 L178 120 Z" fill="#2f7df6" stroke="#1a1238" stroke-width="4" stroke-linejoin="round"/>
+                <path d="M120 30 V120 M84 62 H156" stroke="#fff" stroke-width="2" opacity=".9"/>
+                <path d="M80 70 H160" stroke="#e8f2ff" stroke-width="5"/>
+                <path d="M118 118 Q100 60 138 46" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round"/>
+                <ellipse cx="138" cy="46" rx="16" ry="7" fill="#ff5a6e" opacity=".55"/>
+                <ellipse cx="138" cy="46" rx="16" ry="7" fill="none" stroke="#fff" stroke-width="3"/>
+                <circle cx="138" cy="46" r="2.6" fill="#fff"/>
+                <circle cx="118" cy="118" r="18" fill="none" stroke="#ffc93c" stroke-width="4"/>
+                <circle cx="118" cy="118" r="6" fill="#ffb020" stroke="#1a1238" stroke-width="2.5"/>
+              </svg>
+            </div>
+            <div class="sc-body">
+              <div class="sc-title">Clásico</div>
+              <p>Apunta con el ratón en la mesa rival y suelta el golpe cuando el anillo se cierre. Puro timing.</p>
+              <div class="tags"><span>Timing</span><span>Recomendado</span></div>
+            </div>
+          </button>
+          <button class="style-card" data-v="free">
+            <span class="sc-check"><svg><use href="#i-check"/></svg></span>
+            <div class="sc-art art-free">
+              <svg viewBox="0 0 240 130">
+                <path d="M30 116 C60 112 70 80 98 84 S128 70 132 64" fill="none" stroke="#4da8ff" stroke-width="11" stroke-linecap="round"/>
+                <path d="M30 116 C60 112 70 80 98 84 S128 70 132 64" fill="none" stroke="#1a1238" stroke-width="15" stroke-linecap="round" opacity=".0"/>
+                <g transform="rotate(-18 150 52)">
+                  <rect x="144" y="62" width="12" height="30" rx="4" fill="#d9a066" stroke="#1a1238" stroke-width="3.5"/>
+                  <circle cx="150" cy="44" r="27" fill="#f03e3e" stroke="#1a1238" stroke-width="4.5"/>
+                  <ellipse cx="141" cy="34" rx="9" ry="5" fill="#fff" opacity=".35" transform="rotate(-30 141 34)"/>
+                </g>
+                <circle cx="132" cy="66" r="10" fill="#4da8ff" stroke="#1a1238" stroke-width="3.5"/>
+                <path d="M196 30 a40 40 0 0 1 0 46" fill="none" stroke="#3ee0b0" stroke-width="4" stroke-linecap="round"/>
+                <path d="M190 74 l6 6 l5 -8" fill="none" stroke="#3ee0b0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M104 22 a40 40 0 0 0 0 40" fill="none" stroke="#ffc93c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M98 26 l6 -6 l5 7" fill="none" stroke="#ffc93c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="196" y="92" width="22" height="30" rx="11" fill="#fff" stroke="#1a1238" stroke-width="3.5"/>
+                <path d="M207 92 v10" stroke="#1a1238" stroke-width="3"/>
+              </svg>
+            </div>
+            <div class="sc-body">
+              <div class="sc-title">Mano libre</div>
+              <p>Tu ratón es la pala. El swing decide potencia y efecto; clic izquierdo y derecho giran la pala.</p>
+              <div class="tags"><span>Swing real</span><span>Experto</span></div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTIDO -->
+    <div class="pane" data-pane="rules">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Reglas</span><h3>Partido</h3></div>
+        <div class="opt-row">
+          <div class="opt-lbl"><b>Rival</b><span id="diffDesc">Equilibrado. Castiga los errores.</span></div>
+          <div class="sel" data-k="diff"><button class="arr" data-d="-1" aria-label="Anterior">‹</button><div class="sel-val"><span class="v"></span><i class="meter"><i></i><i></i><i></i><i></i></i></div><button class="arr" data-d="1" aria-label="Siguiente">›</button></div>
+        </div>
+        <div class="opt-row">
+          <div class="opt-lbl"><b>Puntos</b><span>Gana quien llegue primero con 2 de ventaja.</span></div>
+          <div class="sel" data-k="target"><button class="arr" data-d="-1" aria-label="Anterior">‹</button><div class="sel-val"><span class="v"></span></div><button class="arr" data-d="1" aria-label="Siguiente">›</button></div>
+        </div>
+        <div class="opt-row">
+          <div class="opt-lbl"><b>Movimiento</b><span id="moveDesc">Tu personaje corre solo hacia la bola.</span></div>
+          <div class="sel" data-k="assist"><button class="arr" data-d="-1" aria-label="Anterior">‹</button><div class="sel-val"><span class="v"></span></div><button class="arr" data-d="1" aria-label="Siguiente">›</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AYUDA -->
+    <div class="pane" data-pane="help">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Guía</span><h3>Cómo jugar</h3></div>
+        <div class="help-grid" id="helpGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="prompts">
+    <span><kbd>↑</kbd><kbd>↓</kbd>Navegar</span>
+    <span><kbd>←</kbd><kbd>→</kbd>Cambiar</span>
+    <span><kbd>Enter</kbd>Jugar</span>
+    <span><kbd>M</kbd>Sonido</span>
+  </footer>
+</div>
+
+<!-- ================= HUD ================= -->
+<div id="hud" class="hidden">
+  <div id="scoreboard">
+    <div class="sb-team p1"><i class="srv" id="srv0"></i><span class="sb-name" id="name0">Tú</span><span class="sb-pts" id="s0">0</span></div>
+    <div class="sb-mid"><span id="target">A 11</span></div>
+    <div class="sb-team p2"><span class="sb-pts" id="s1">0</span><span class="sb-name" id="name1">CPU</span><i class="srv" id="srv1"></i></div>
+  </div>
+  <button id="pauseBtn" class="pause-btn" title="Pausa (P)"><i></i><i></i></button>
+  <div id="hint"></div>
+  <div id="camTag"></div>
+  <div id="netTag" class="hidden"><i></i><span id="netPing">— ms</span></div>
+  <div id="banner"></div>
+  <div id="controls"></div>
+  <div id="touch" class="hidden">
+    <button id="tTop" class="tbtn top">Liftado</button>
+    <button id="tBack" class="tbtn back">Cortado</button>
+  </div>
+</div>
+<div id="pops"></div>
+
+<!-- ================= PAUSA ================= -->
+<div id="pause" class="screen dim hidden">
+  <div class="sheet">
+    <div class="sheet-kicker">Partido detenido</div>
+    <h2 class="sheet-title">Pausa</h2>
+    <div class="sheet-score"><span class="p1" id="pS0">0</span><i>–</i><span class="p2" id="pS1">0</span></div>
+    <div class="btn-stack">
+      <button class="mbtn primary" id="resumeBtn"><span>Continuar</span><kbd>Esc</kbd></button>
+      <button class="mbtn" id="restartBtn"><span>Reiniciar partido</span></button>
+      <p class="sheet-text small hidden" id="pauseOnline">Partido online: el juego sigue en marcha mientras estás en este menú.</p>
+      <button class="mbtn" id="quitBtn"><span>Salir al menú</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FIN DE PARTIDO ================= -->
+<div id="over" class="screen dim hidden">
+  <div class="sheet wide">
+    <div class="sheet-kicker" id="overKicker">Final del partido</div>
+    <h2 class="sheet-title" id="overTitle">Victoria</h2>
+    <div class="sheet-score big"><span class="p1" id="oS0">11</span><i>–</i><span class="p2" id="oS1">7</span></div>
+    <div id="overStats" class="stats"></div>
+    <div class="btn-stack row">
+      <button class="mbtn primary" id="againBtn"><span>Revancha</span><kbd>Enter</kbd></button>
+      <button class="mbtn" id="menuBtn"><span>Menú principal</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="err" class="hidden"></div>
+<div id="fileWarn" class="screen dim hidden">
+  <div class="sheet">
+    <div class="sheet-kicker">Cómo abrir el juego</div>
+    <h2 class="sheet-title small">Usa Jugar.bat</h2>
+    <p class="sheet-text">El navegador no permite ejecutar el juego directamente desde el archivo. Haz doble clic en <b>Jugar.bat</b> dentro de la carpeta del proyecto.</p>
+  </div>
+</div>
+<script>
+  if (location.protocol === 'file:') {
+    document.getElementById('fileWarn').classList.remove('hidden');
+    document.getElementById('menu').classList.add('hidden');
+  }
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
