@@ -466,9 +466,6 @@ kbd {
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 /* ---------- Vestidor: girar al personaje ---------- */
-#rotHint { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); display: none; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: rgba(26,18,56,.82); color: #fff; font: 800 12px var(--font); letter-spacing: .1em; text-transform: uppercase; pointer-events: none; z-index: 2; }
-#rotHint svg { width: 18px; height: 18px; color: var(--sun); }
-#menu.posing #rotHint { display: flex; animation: fadeUp .4s var(--ease) both; }
 #menu.posing { cursor: grab; }
 #menu.posing.dragging { cursor: grabbing; }
 #menu.posing .menu-panel, #menu.posing .menu-left, #menu.posing .menu-top { cursor: default; }
