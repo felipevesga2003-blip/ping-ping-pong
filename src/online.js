@@ -26,7 +26,8 @@ export function createOnline(cb) {
     onClose: reason => {
       const was = S.connected;
       reset();
-      if (was) { cb.onClosed(reason); status(reason, 'err'); }
+      if (was) { cb.onClosed(reason); status(reason, 'err'); $('roomVs').classList.add('hidden'); $('onlineStart').hidden = true; }
+      cb.onLeft && cb.onLeft();
     },
     onError: text => { status(text, 'err'); },
   });
@@ -40,6 +41,11 @@ export function createOnline(cb) {
         status(S.isHost ? '¡Rival conectado! Pulsa Empezar cuando estéis listos.' : '¡Conectado! Esperando a que el anfitrión empiece…', 'ok');
         $('onlineStart').hidden = !S.isHost;
         cb.onReady(m);
+        return;
+      case 'look':                                   // el rival cambió su personaje
+        if (S.remote) { S.remote.look = m.look; showVs(); }
+        cb.onLook && cb.onLook(m.look);
+        status(S.isHost ? '¡Rival conectado! Pulsa Empezar cuando estéis listos.' : '¡Conectado! Esperando a que el anfitrión empiece…', 'ok');
         return;
       case 'full': status('Esa sala ya está llena.', 'err'); return;
       case 'ping': net.send({ t: 'pong', ts: m.ts }); return;
@@ -97,6 +103,7 @@ export function createOnline(cb) {
     net.leave(); reset();
     S.active = false; S.isHost = false; S.code = '';
     showRoom(false); status('', '');
+    cb.onLeft && cb.onLeft();
   }
   function start() {
     if (!S.isHost || !S.connected || !S.remote) return;
@@ -116,6 +123,7 @@ export function createOnline(cb) {
 
   return {
     S, host, join, leave, start,
+    refreshVs: () => { if (S.remote) showVs(); },
     send: m => net.send(m),
     get playing() { return S.connected && !!S.remote; },
   };

@@ -1,22 +1,30 @@
 // =============================================================
 //  Audio sintetizado (WebAudio) — sin archivos externos
 // =============================================================
-const AU = { ctx: null, master: null, muted: false, noise: null, enabled: true };
+// Buses: efectos → sfx, música → music, ambos → master (el silencio actúa en master)
+const AU = { ctx: null, master: null, sfx: null, music: null, muted: false, noise: null, enabled: true, sfxVol: 0.8, musicVol: 0.3 };
 
 export function initAudio() {
   if (AU.ctx) { if (AU.ctx.state === 'suspended') AU.ctx.resume(); return; }
   try {
     const A = new (window.AudioContext || window.webkitAudioContext)();
-    const m = A.createGain(); m.gain.value = 0.5; m.connect(A.destination);
+    const m = A.createGain(); m.gain.value = AU.muted ? 0 : 0.5; m.connect(A.destination);
+    const sfx = A.createGain(); sfx.gain.value = AU.sfxVol; sfx.connect(m);
+    const music = A.createGain(); music.gain.value = AU.musicVol * 0.5; music.connect(m);
     const buf = A.createBuffer(1, A.sampleRate * 1.5, A.sampleRate);
     const d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    Object.assign(AU, { ctx: A, master: m, noise: buf });
+    Object.assign(AU, { ctx: A, master: m, sfx, music, noise: buf });
+    startMusic();
   } catch (e) { /* sin audio */ }
 }
-export const toggleMute = () => (AU.muted = !AU.muted);
+function applyMaster() { if (AU.master) AU.master.gain.setTargetAtTime(AU.muted ? 0 : 0.5, AU.ctx.currentTime, 0.05); }
+export const toggleMute = () => { AU.muted = !AU.muted; applyMaster(); return AU.muted; };
 export const isMuted = () => AU.muted;
+export const setMuted = v => { AU.muted = !!v; applyMaster(); };
 export const setSfxEnabled = v => { AU.enabled = v; };
+export function setSfxVolume(v) { AU.sfxVol = v; if (AU.sfx) AU.sfx.gain.setTargetAtTime(v, AU.ctx.currentTime, 0.05); }
+export function setMusicVolume(v) { AU.musicVol = v; if (AU.music) AU.music.gain.setTargetAtTime(v * 0.5, AU.ctx.currentTime, 0.3); }
 
 function tone(f, dur, type = 'sine', vol = 0.2, f2 = 0, delay = 0) {
   const A = AU.ctx; if (!A || AU.muted) return;
@@ -25,7 +33,47 @@ function tone(f, dur, type = 'sine', vol = 0.2, f2 = 0, delay = 0) {
   o.type = type; o.frequency.setValueAtTime(f, t);
   if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + dur + 0.02);
+  o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + dur + 0.02);
+}
+
+// ---------- Música generativa muy suave (lo-fi de parque) ----------
+// Cmaj7 → Am7 → Fmaj7 → G6, pad lento + bajo + punteos dispersos. Todo con volumen bajo.
+const BPM = 84, EIGHTH = 60 / BPM / 2;
+const PROG = [[36, [60, 64, 67, 71]], [33, [57, 60, 64, 67]], [29, [57, 60, 65, 69]], [31, [55, 59, 62, 64]]];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const MUS = { on: false, timer: 0, next: 0, step: 0 };
+function mNote(midi, t, dur, { type = 'sine', vol = 0.02, attack = 0.02, cutoff = 0, detune = 0 } = {}) {
+  const A = AU.ctx;
+  const o = A.createOscillator(), g = A.createGain();
+  o.type = type; o.frequency.value = mtof(midi); o.detune.value = detune;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  let node = o;
+  if (cutoff) { const f = A.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; o.connect(f); node = f; }
+  node.connect(g); g.connect(AU.music);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function scheduleStep(s, t) {
+  const bar = Math.floor(s / 8) % PROG.length, pos = s % 8, [root, chord] = PROG[bar];
+  if (pos === 0) {
+    for (const n of chord) { mNote(n, t, EIGHTH * 8.4, { vol: 0.016, attack: 0.9 }); mNote(n, t, EIGHTH * 8.4, { type: 'triangle', vol: 0.008, attack: 1.1, detune: 7 }); }
+    mNote(root, t, EIGHTH * 3.5, { type: 'triangle', vol: 0.05, attack: 0.03, cutoff: 500 });
+  }
+  if (pos === 4) mNote(root + 7, t, EIGHTH * 3, { type: 'triangle', vol: 0.035, attack: 0.03, cutoff: 500 });
+  if ((pos === 2 || pos === 5 || pos === 7) && Math.random() < 0.55) {
+    mNote(chord[Math.floor(Math.random() * chord.length)] + 12, t, 0.45, { type: 'triangle', vol: 0.022, attack: 0.01, cutoff: 2400 });
+  }
+}
+function schedule() {
+  const A = AU.ctx; if (!A || !MUS.on) return;
+  if (MUS.next < A.currentTime) MUS.next = A.currentTime + 0.05;     // tras una pausa del navegador
+  while (MUS.next < A.currentTime + 0.3) { scheduleStep(MUS.step++, MUS.next); MUS.next += EIGHTH; }
+}
+export function startMusic() {
+  if (!AU.ctx || MUS.on) return;
+  MUS.on = true; MUS.next = AU.ctx.currentTime + 0.2;
+  MUS.timer = setInterval(schedule, 100);
 }
 function noise(dur, vol, freq, { delay = 0, attack = 0.002, q = 0.9, type = 'bandpass' } = {}) {
   const A = AU.ctx; if (!A || AU.muted) return;
@@ -36,7 +84,7 @@ function noise(dur, vol, freq, { delay = 0, attack = 0.002, q = 0.9, type = 'ban
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(vol, t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(f); f.connect(g); g.connect(AU.master);
+  s.connect(f); f.connect(g); g.connect(AU.sfx);
   s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
 }
 

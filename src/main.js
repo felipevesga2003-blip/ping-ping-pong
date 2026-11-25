@@ -11,7 +11,7 @@ import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnaps
 import { createOnline } from './online.js';
 import { createArena } from './arena.js';
 import { createFX } from './fx.js';
-import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled } from './audio.js';
+import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume } from './audio.js';
 import { createMenu, renderControls, CONTROLS } from './ui.js';
 
 const $ = id => document.getElementById(id);
@@ -67,7 +67,7 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, control: 'classic', zoom: 0.55 };
+const settings = { diff: 1, target: 11, assist: 1, control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
@@ -85,17 +85,19 @@ function rebuildPlayer() {
 let cpuShirt = rivalColor(settings.look.shirtColor);
 let remoteLook = null;          // aspecto del rival online (null = CPU)
 // Color del rival: online respeta su elección salvo que choque con la mía
+// En una sala online (aunque aún no haya empezado el partido) el rival mostrado es el remoto
+const showRemote = () => !!remoteLook && (G.online || online.playing);
 function opponentShirt() {
   const mine = settings.look.shirtColor;
-  if (G.online && remoteLook) return hueDist(remoteLook.shirtColor, mine) < 0.08 ? rivalColor(mine) : remoteLook.shirtColor;
+  if (showRemote()) return hueDist(remoteLook.shirtColor, mine) < 0.08 ? rivalColor(mine) : remoteLook.shirtColor;
   return rivalColor(mine);
 }
 function rebuildCpu(force = false) {
-  const idx = G.online ? 'online' : G.demo ? 2 : +settings.diff;
+  const idx = showRemote() ? 'online' : G.demo ? 2 : +settings.diff;
   if (idx === cpuLookIdx && !force) return;
   cpuLookIdx = idx;
   if (views[1]) views[1].dispose();
-  views[1] = createCharacter(G.online && remoteLook ? { ...remoteLook, shirtColor: opponentShirt() } : cpuLookFor(idx, settings.look.shirtColor));
+  views[1] = createCharacter(showRemote() ? { ...remoteLook, shirtColor: opponentShirt() } : cpuLookFor(idx, settings.look.shirtColor));
   scene.add(views[1].root);
 }
 // El rival siempre viste el color opuesto al del jugador
@@ -123,6 +125,7 @@ function startGame() {
   screen = 'game'; setSfxEnabled(true);
   show('menu', false); show('over', false); show('pause', false); show('hud', true);
   renderControls(settings.control);
+  $('controls').classList.toggle('off', !+settings.showControls);
   newMatch(false);
 }
 function toMenu(keepRoom = false) {
@@ -152,7 +155,7 @@ const online = createOnline({
   getHello: () => ({ look: settings.look, control: settings.control, v: 1 }),
   getTarget: () => +settings.target,
   blip: () => { initAudio(); SFX.blip(); },
-  onReady: hello => { remoteLook = { ...DEFAULT_LOOK, ...hello.look }; SFX.select(); if (DEBUG === 'bot' && online.S.isHost) setTimeout(() => online.start(), 500); },
+  onReady: hello => { remoteLook = { ...DEFAULT_LOOK, ...hello.look }; applyTeamColors(); rebuildCpu(true); SFX.select(); if (DEBUG === 'bot' && online.S.isHost) setTimeout(() => online.start(), 500); },
   onStart: ({ firstServer, target }) => startOnline(firstServer, target),
   onMessage: m => {
     if (!G.online) return;
@@ -163,6 +166,8 @@ const online = createOnline({
     else if (m.t === 'bye') onlineClosed(`${remoteLook ? remoteLook.name : 'Tu rival'} abandonó el partido.`);
   },
   onClosed: reason => onlineClosed(reason),
+  onLook: look => { remoteLook = { ...DEFAULT_LOOK, ...look }; applyTeamColors(); rebuildCpu(true); refreshHUD(); },
+  onLeft: () => { if (!G.online) { remoteLook = null; applyTeamColors(); rebuildCpu(true); } },
 });
 function startOnline(firstServer, target) {
   initAudio(); SFX.select();
@@ -171,6 +176,7 @@ function startOnline(firstServer, target) {
   show('menu', false); show('over', false); show('pause', false); show('hud', true); show('netTag', true);
   $('againBtn').classList.remove('waiting');
   renderControls(settings.control);
+  $('controls').classList.toggle('off', !+settings.showControls);
   newMatch(false, { online: true, firstServer, target });
   applyTeamColors(); rebuildCpu(true);
   if (DEBUG === 'bot') G.chars[0].ai = true;
@@ -186,14 +192,79 @@ function tryRematch() {
   if (!rematch.me || !rematch.them) return;
   if (online.S.isHost) online.start();
 }
+// estado del giro en el vestidor (debe existir antes de crear el menú: onPane lo usa al iniciar)
+const rot = { auto: true, yaw: 0, vel: 0, drag: false, lastX: 0 };
 const menu = createMenu({
   settings,
   onChange: applySettings,
   onPlay: startGame,
   blip: () => { initAudio(); SFX.blip(); },
-  onLook: nameOnly => { applySettings(); if (!nameOnly) rebuildPlayer(); },
-  onPane: id => { menuPane = id; $('menu').classList.toggle('posing', id === 'char'); },
+  onLook: nameOnly => {
+    applySettings(); if (!nameOnly) rebuildPlayer();
+    // en una sala, el rival ve tus cambios al momento
+    if (online.playing) { online.send({ t: 'look', look: settings.look }); online.refreshVs(); }
+  },
+  onPane: id => { menuPane = id; rot.auto = true; rot.vel = 0; $('menu').classList.toggle('posing', id === 'char'); },
 });
+
+// ---------- Vestidor: girar al frijolito arrastrando ----------
+$('menu').addEventListener('pointerdown', e => {
+  if (!posing() || e.button !== 0 || e.target.closest('.menu-panel, .menu-left, .menu-top, .prompts')) return;
+  if (rot.auto) { rot.yaw = views[0].root.rotation.y - Math.PI; rot.auto = false; }
+  rot.drag = true; rot.lastX = e.clientX; rot.vel = 0;
+  $('menu').classList.add('dragging');
+});
+addEventListener('pointermove', e => {
+  if (!rot.drag) return;
+  const d = (e.clientX - rot.lastX) * 0.012;
+  rot.yaw += d; rot.vel = d * 25; rot.lastX = e.clientX;
+});
+addEventListener('pointerup', () => { if (rot.drag) { rot.drag = false; $('menu').classList.remove('dragging'); } });
+
+// ---------- Ajustes ----------
+let settingsOpen = false;
+function applyQuality() {
+  const q = settings.quality;
+  renderer.setPixelRatio(q === 'high' ? Math.min(window.devicePixelRatio || 1, 2) : q === 'medium' ? 1 : 0.75);
+  const sh = q !== 'low';
+  if (renderer.shadowMap.enabled !== sh) {
+    renderer.shadowMap.enabled = sh;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
+  const size = q === 'high' ? 2048 : 1024;
+  if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  resize();
+}
+function applyAudioSettings() { setMusicVolume(+settings.music); setSfxVolume(+settings.sfx); }
+function refreshSettingsUI() {
+  $('setMusic').value = Math.round(settings.music * 100); $('setMusicV').textContent = Math.round(settings.music * 100);
+  $('setSfx').value = Math.round(settings.sfx * 100); $('setSfxV').textContent = Math.round(settings.sfx * 100);
+  document.querySelectorAll('#settings .seg2[data-k]').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(settings[s.dataset.k]) === b.dataset.v)));
+  $('fsBtn').textContent = document.fullscreenElement ? 'Salir' : 'Activar';
+}
+function openSettings(on) {
+  settingsOpen = on; show('settings', on);
+  if (on) { refreshSettingsUI(); initAudio(); }
+}
+$('setMusic').addEventListener('input', e => { settings.music = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
+$('setSfx').addEventListener('input', e => { settings.sfx = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
+$('setSfx').addEventListener('change', () => SFX.paddle(0.5));
+document.querySelectorAll('#settings .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  settings[s.dataset.k] = b.dataset.v; applySettings(); SFX.blip();
+  if (s.dataset.k === 'quality') applyQuality();
+  if (s.dataset.k === 'showControls') $('controls').classList.toggle('off', !+settings.showControls);
+  refreshSettingsUI();
+}));
+$('fsBtn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+  setTimeout(refreshSettingsUI, 300);
+});
+$('settingsBtn').onclick = () => { SFX.blip(); openSettings(true); };
+$('pauseSettings').onclick = () => openSettings(true);
+$('settingsClose').onclick = () => openSettings(false);
+applyAudioSettings();
+applyQuality();
 function again() {
   if (!G.online) return startGame();
   rematch.me = true; online.send({ t: 'rematch' });
@@ -395,6 +466,7 @@ if (matchMedia('(pointer: coarse)').matches) { $('touch').classList.remove('hidd
 const ACT_TOP = ['Space', 'KeyJ'], ACT_BACK = ['KeyK', 'ShiftLeft', 'ShiftRight'];
 addEventListener('keydown', e => {
   initAudio();
+  if (settingsOpen) { if (e.code === 'Escape' || e.code === 'Enter') { e.preventDefault(); openSettings(false); } return; }
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Enter' || e.code === 'Escape') e.target.blur(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
@@ -513,7 +585,7 @@ function drawOverlay() {
     octx.strokeStyle = '#1a1238'; octx.lineWidth = w + 4; octx.stroke();
     octx.strokeStyle = color; octx.lineWidth = w; octx.stroke();
   };
-  if (free()) {
+  if (free() && +settings.aids) {
     // Mano libre: dónde cruzará la bola el plano de la pala
     const h = G.hand;
     if (G.phase === 'rally' && b.lastHitter === 1) {
@@ -532,7 +604,7 @@ function drawOverlay() {
     }
     return;
   }
-  if (G.phase === 'rally' && b.lastHitter === 1 && c.swing <= 0 && !c.pending) {
+  if (+settings.aids && G.phase === 'rally' && b.lastHitter === 1 && c.swing <= 0 && !c.pending) {
     const r = P.simToPlane(b, paddleZ(c), c.sign, 0, b.count === 1, 1.2);
     if (r && r.ok && r.t < 1.1) {
       const s = toScreen(tmpV.set(r.x, r.y, r.z));
@@ -583,7 +655,11 @@ function frame(now) {
     p.x += (1.95 - p.x) * Math.min(1, dt * 5); p.z += (2.3 - p.z) * Math.min(1, dt * 5);
     p.vx = p.vz = 0; p.swing = 0; p.charging = false; p.celebrate = 0; p.mood = 0;
     views[0].sync(p, dt, tmpV.set(p.x, 1.0, p.z - 2), time);
-    views[0].root.rotation.y = Math.PI + Math.sin(time * 0.6) * 0.95;
+    if (rot.auto) views[0].root.rotation.y = Math.PI + Math.sin(time * 0.6) * 0.95;
+    else {
+      if (!rot.drag) { rot.yaw += rot.vel * dt; rot.vel *= Math.exp(-6 * dt); }   // inercia suave al soltar
+      views[0].root.rotation.y = Math.PI + rot.yaw;
+    }
     views[1].sync(G.chars[1], 0, ballPos, time);
   } else views.forEach((v, i) => v.sync(G.chars[i], gdt, ballPos, time));
   ballView.position.copy(ballPos);
@@ -605,7 +681,7 @@ function frame(now) {
   fx.reticle.visible = human && !free() && (G.phase === 'rally' || (G.phase === 'serve' && G.server === 0));
   fx.reticle.position.set(G.aim.x, C.TABLE_H + 0.002, G.aim.z);
   let landOn = false;
-  if (human && G.phase === 'rally' && b.lastHitter === 1 && b.count === 0) {
+  if (human && +settings.aids && G.phase === 'rally' && b.lastHitter === 1 && b.count === 0) {
     const lb = P.predictBounce(b);
     if (lb && lb.z > 0) { fx.land.position.set(lb.x, C.TABLE_H + 0.003, lb.z); landOn = true; }
   }
@@ -623,6 +699,9 @@ function frame(now) {
       $('netTag').className = ms > 160 ? 'bad' : ms > 90 ? 'slow' : '';
     }
   }
+  // Mano libre: el ratón es la pala, así que el cursor se oculta durante el partido
+  const noCursor = screen === 'game' && free() && G.phase !== 'over' && !settingsOpen;
+  if (noCursor !== document.body.classList.contains('nocursor')) document.body.classList.toggle('nocursor', noCursor);
   renderer.render(scene, camera);
   drawOverlay();
   if (DEBUG) document.title = `t=${G.time.toFixed(1)} ${G.phase} ${G.score} r=${G.rally}`;

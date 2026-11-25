@@ -457,3 +457,64 @@ kbd {
   .logo { display: none; }
   .prompts { display: none; }
 }
+
+/* ---------- Caja de código: apilada para que nunca se corte ---------- */
+.join-row { flex-direction: column; }
+.join-row input { width: 100%; flex: none; height: 52px; text-align: center; font-size: 26px; letter-spacing: .3em; padding: 0 0 0 .3em; }
+.join-btn { width: 100%; height: 46px; }
+#joinCode.shake { animation: shake .35s; border-color: var(--coral); }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* ---------- Vestidor: girar al personaje ---------- */
+#rotHint { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); display: none; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: rgba(26,18,56,.82); color: #fff; font: 800 12px var(--font); letter-spacing: .1em; text-transform: uppercase; pointer-events: none; z-index: 2; }
+#rotHint svg { width: 18px; height: 18px; color: var(--sun); }
+#menu.posing #rotHint { display: flex; animation: fadeUp .4s var(--ease) both; }
+#menu.posing { cursor: grab; }
+#menu.posing.dragging { cursor: grabbing; }
+#menu.posing .menu-panel, #menu.posing .menu-left, #menu.posing .menu-top { cursor: default; }
+
+/* ---------- Ajustes ---------- */
+.set-list { display: flex; flex-direction: column; margin: 6px 0 22px; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+.set-lbl { display: flex; flex-direction: column; gap: 3px; }
+.set-lbl b { font: italic 900 18px var(--font); text-transform: uppercase; }
+.set-lbl span { font: 600 12.5px var(--font); color: rgba(255,255,255,.6); }
+.set-ctl { display: flex; align-items: center; gap: 12px; }
+.set-ctl output { width: 34px; text-align: right; font: italic 900 16px var(--font); color: var(--sun); }
+.set-ctl input[type=range] { -webkit-appearance: none; appearance: none; width: 190px; height: 10px; border-radius: 99px; background: rgba(255,255,255,.15); outline: none; cursor: pointer; }
+.set-ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--sun); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.set-ctl input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--sun); border: 3px solid var(--ink); }
+.seg2 { display: flex; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.2); border-radius: 11px; padding: 3px; }
+.seg2 button { border: 0; background: none; color: #fff; font: 800 12px var(--font); letter-spacing: .08em; text-transform: uppercase; padding: 8px 13px; border-radius: 8px; cursor: pointer; }
+.seg2 button:hover { background: rgba(255,255,255,.1); }
+.seg2 button.on { background: var(--sun); color: var(--ink); }
+
+/* ---------- Cómo jugar (pestañas por estilo + pasos numerados) ---------- */
+.help-wrap { padding: 16px 22px 20px; display: flex; flex-direction: column; gap: 14px; }
+.help-tabs { display: flex; gap: 6px; padding: 4px; background: var(--paper-2); border-radius: 12px; }
+.help-tabs button { flex: 1; border: 0; background: none; padding: 9px 10px; border-radius: 9px; font: italic 900 15px var(--font); text-transform: uppercase; color: #6b5f8a; cursor: pointer; }
+.help-tabs button.on { background: var(--ink); color: #fff; box-shadow: 0 3px 0 rgba(26,18,56,.3); }
+.steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.step { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 10px 11px; background: #fff; border: 2px solid #e5dbc6; border-radius: 12px; }
+.step .n { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--ink); color: var(--sun); font: italic 900 16px var(--font); transform: skewX(var(--skew)); }
+.step b { display: block; font: italic 900 14px var(--font); text-transform: uppercase; margin-bottom: 2px; }
+.step span { font: 600 12px/1.4 var(--font); color: #4b416b; }
+.step kbd { height: 19px; min-width: 20px; font-size: 9.5px; padding: 0 5px; border-bottom-width: 3px; margin: 0 1px; vertical-align: 1px; }
+.fx-title { font: 800 10.5px var(--font); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; }
+.fx-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.fx { padding: 9px 10px; border-radius: 12px; background: #fff; border: 2px solid #e5dbc6; }
+.fx b { display: block; font: italic 900 13px var(--font); text-transform: uppercase; }
+.fx .how { margin: 3px 0 4px; padding: 3px 6px; border-radius: 6px; background: var(--ink); color: #fff; font: 800 10.5px/1.3 var(--font); display: inline-block; border: 0; }
+.fx span { display: block; font: 600 11px/1.3 var(--font); color: #6b5f8a; }
+.fx.t1 b { color: #e08a00; } .fx.t2 b { color: #1f8fd6; } .fx.t3 b { color: #0fa38a; } .fx.t4 b { color: var(--coral-d); }
+.help-common { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 700 11.5px var(--font); color: #4b416b; }
+.help-common span { display: flex; align-items: center; gap: 5px; }
+.help-common kbd { height: 20px; font-size: 9.5px; border-bottom-width: 3px; }
+
+/* ---------- Mano libre: sin cursor durante el partido ---------- */
+body.nocursor, body.nocursor * { cursor: none !important; }
+/* correcciones de la guía: solo el título del paso va en bloque; las etiquetas de efecto pueden ocupar 2 líneas */
+.step b { display: inline; font: inherit; text-transform: none; margin: 0; color: var(--ink); font-weight: 800; }
+.step > div > b { display: block; font: italic 900 14px var(--font); text-transform: uppercase; margin-bottom: 2px; }
+.fx .how { display: block; height: auto; min-height: 0; margin: 4px 0 5px; padding: 4px 6px; white-space: normal; text-transform: none; text-align: left; line-height: 1.3; letter-spacing: 0; font: 800 10.5px/1.3 var(--font); color: #fff; background: var(--ink); border: 0; border-radius: 6px; }
+#helpGrid.help-grid { display: block; padding: 0; }

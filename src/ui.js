@@ -56,16 +56,48 @@ export function renderControls(mode) {
     `<div class="ctl-foot"><kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`;
 }
 
-function renderHelp() {
-  const col = (mode, cls) => `<div class="help-col ${cls}"><h4><i></i>${CONTROLS[mode].name}</h4>` +
-    CONTROLS[mode].rows.slice(0, 7).map(([k, t]) => `<div class="hrow"><kbd>${k}</kbd><span>${t}</span></div>`).join('') + '</div>';
-  $('helpGrid').innerHTML = col('classic', 'classic') + col('free', 'free') +
-    `<div class="help-tech">
-      <div class="tech t1"><b>Liftado</b><span>Cae rápido y acelera al botar.</span></div>
-      <div class="tech t2"><b>Cortado</b><span>Flota, frena y bota bajo.</span></div>
-      <div class="tech t3"><b>Curva</b><span>Se dobla en el aire hacia un lado.</span></div>
-      <div class="tech t4"><b>Smash</b><span>Bola alta: remate imparable.</span></div>
-    </div>`;
+// Guía "Cómo jugar": pasos numerados + cómo hacer cada efecto, por estilo de control
+const HELP = {
+  classic: {
+    steps: [
+      ['Apunta', 'Mueve el <b>ratón</b> sobre la mesa rival: la diana rosa marca dónde caerá tu bola.'],
+      ['Carga', 'Mantén pulsado el <b>clic</b>. Cuanto más tiempo, más fuerte sale el golpe.'],
+      ['Suelta a tiempo', 'Cuando la bola viene, un <b>anillo</b> se cierra sobre ella. Suelta justo cuando se pone <b>amarillo</b>.'],
+      ['Muévete', 'Tu frijolito corre solo a la bola. En modo manual usa <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>.'],
+    ],
+    fx: [
+      ['t1', 'Liftado', 'Clic izquierdo', 'Baja rápido y acelera al botar.'],
+      ['t2', 'Cortado', 'Clic derecho', 'Flota, frena y bota bajito.'],
+      ['t3', 'Curva', 'Sacude el ratón al soltar', 'Se dobla hacia ese lado.'],
+      ['t4', 'Smash', 'Bola alta + clic izq.', 'Aparece el aviso «¡Smash!».'],
+    ],
+  },
+  free: {
+    steps: [
+      ['Tu ratón es la pala', 'La pala sigue al cursor y el brazo se estira hasta donde haga falta.'],
+      ['Colócate', 'Un <b>anillo</b> marca por dónde pasará la bola. Se pone <b>verde</b> si tu pala está centrada.'],
+      ['Haz swing', 'Mueve el ratón al golpear. La <b>velocidad</b> del movimiento es la potencia.'],
+      ['Saca', 'Golpea la bola que flota junto a ti con un swing hacia arriba.'],
+    ],
+    fx: [
+      ['t1', 'Liftado', 'Swing hacia arriba', 'Golpe rápido y potente.'],
+      ['t2', 'Cortado', 'Swing hacia abajo', 'Bola lenta que flota.'],
+      ['t3', 'Curva', 'Swing de lado o gira la pala (clic izq./der.)', 'Se dobla hacia ese lado.'],
+      ['t4', 'Smash', 'Bola alta + swing fuerte abajo', 'Remate imparable.'],
+    ],
+  },
+};
+let helpMode = 'classic';
+function renderHelp(mode = helpMode) {
+  helpMode = mode;
+  const h = HELP[mode];
+  $('helpGrid').innerHTML = `<div class="help-wrap">
+    <div class="help-tabs">${Object.keys(HELP).map(k => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${CONTROLS[k].name}</button>`).join('')}</div>
+    <div class="steps">${h.steps.map(([t, d], i) => `<div class="step"><i class="n">${i + 1}</i><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
+    <div class="fx-title">Efectos</div>
+    <div class="fx-grid">${h.fx.map(([c, t, how, d]) => `<div class="fx ${c}"><b>${t}</b><kbd class="how">${how}</kbd><span>${d}</span></div>`).join('')}</div>
+    <div class="help-common"><span><kbd>Rueda</kbd> cámara · al tope, 1ª persona</span><span><kbd>P</kbd> pausa</span><span><kbd>M</kbd> sonido</span><span><kbd>H</kbd> ocultar controles</span></div>
+  </div>`;
 }
 
 // El orden sale del propio HTML (así añadir una sección nunca desincroniza menú y paneles)
@@ -115,7 +147,7 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     Object.assign(look(), randomLook(), keep); lookChanged(); blip();
   });
 
-  function setStyle(v) { if (settings.control === v) return; settings.control = v; onChange(); refresh(); blip(); }
+  function setStyle(v) { if (settings.control === v) return; settings.control = v; onChange(); refresh(); renderHelp(v); blip(); }
 
   items.forEach((el, j) => {
     el.addEventListener('mouseenter', () => select(j));
@@ -170,7 +202,8 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     } else if (code === 'Enter' || code === 'Space') onPlay();
   }
 
-  renderHelp();
+  renderHelp(settings.control);
+  $('helpGrid').addEventListener('click', e => { const b = e.target.closest('.help-tabs button'); if (b) { renderHelp(b.dataset.m); blip(); } });
   refresh();
   select(0, false);
   return { key, refresh, pane: () => NAV[sel], go: id => select(NAV.indexOf(id), false) };

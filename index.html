@@ -60,6 +60,8 @@
     <symbol id="i-char" viewBox="0 0 24 24"><path d="M12 2.5c4.2 0 6.8 3 6.8 7.2v5.6c0 3.6-2.9 6.2-6.8 6.2s-6.8-2.6-6.8-6.2V9.7C5.2 5.5 7.8 2.5 12 2.5z" fill="currentColor"/><circle cx="9.6" cy="9.6" r="1.6" fill="#1a1238"/><circle cx="14.4" cy="9.6" r="1.6" fill="#1a1238"/></symbol>
     <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="8.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.6" fill="currentColor"/></symbol>
     <symbol id="i-online" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M3.5 12h17M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.4" fill="#1a1238"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M18.5 2.8v4.4h-4.4M5.5 21.2v-4.4h4.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></symbol>
     <symbol id="i-paddle" viewBox="0 0 24 24"><rect x="10.3" y="13" width="3.4" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="8.6" r="7" fill="currentColor"/><circle cx="9.6" cy="6.4" r="1.8" fill="#1a1238" opacity=".35"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><g stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 7h16M4 17h16"/></g><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></symbol>
@@ -77,6 +79,7 @@
   <header class="menu-top">
     <div class="season"><span class="dot"></span>Temporada 1 · Torneo del Parque</div>
     <div class="top-right">
+      <button class="chip-btn" id="settingsBtn"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
       <button class="chip-btn" id="muteBtn"><svg><use href="#i-sound"/></svg><span id="muteLbl">Sonido</span></button>
       <span class="build">v1.0</span>
     </div>
@@ -126,6 +129,8 @@
       </button>
     </nav>
   </div>
+
+  <div id="rotHint"><svg><use href="#i-rotate"/></svg><span>Arrastra al frijolito para girarlo</span></div>
 
   <section class="menu-panel">
     <!-- JUGAR -->
@@ -335,6 +340,7 @@
     <div class="btn-stack">
       <button class="mbtn primary" id="resumeBtn"><span>Continuar</span><kbd>Esc</kbd></button>
       <button class="mbtn" id="restartBtn"><span>Reiniciar partido</span></button>
+      <button class="mbtn" id="pauseSettings"><span>Ajustes</span></button>
       <p class="sheet-text small hidden" id="pauseOnline">Partido online: el juego sigue en marcha mientras estás en este menú.</p>
       <button class="mbtn" id="quitBtn"><span>Salir al menú</span></button>
     </div>
@@ -352,6 +358,29 @@
       <button class="mbtn primary" id="againBtn"><span>Revancha</span><kbd>Enter</kbd></button>
       <button class="mbtn" id="menuBtn"><span>Menú principal</span></button>
     </div>
+  </div>
+</div>
+
+<!-- ================= AJUSTES ================= -->
+<div id="settings" class="screen dim hidden">
+  <div class="sheet wide">
+    <div class="sheet-kicker">Configuración</div>
+    <h2 class="sheet-title small">Ajustes</h2>
+    <div class="set-list">
+      <div class="set-row"><div class="set-lbl"><b>Música</b><span>Melodía ambiente muy suave</span></div>
+        <div class="set-ctl"><input type="range" id="setMusic" min="0" max="100" step="5"><output id="setMusicV">30</output></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Efectos</b><span>Golpes, botes y público</span></div>
+        <div class="set-ctl"><input type="range" id="setSfx" min="0" max="100" step="5"><output id="setSfxV">80</output></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Calidad gráfica</b><span>Baja = más fluido en equipos modestos</span></div>
+        <div class="seg2" data-k="quality"><button data-v="low">Baja</button><button data-v="medium">Media</button><button data-v="high">Alta</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Ayudas visuales</b><span>Anillo de timing y marca de bote</span></div>
+        <div class="seg2" data-k="aids"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Panel de controles</b><span>Recordatorio en la esquina durante el partido</span></div>
+        <div class="seg2" data-k="showControls"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Pantalla completa</b><span>También con F11</span></div>
+        <div class="seg2"><button id="fsBtn">Activar</button></div></div>
+    </div>
+    <div class="btn-stack row"><button class="mbtn primary" id="settingsClose"><span>Listo</span><kbd>Esc</kbd></button></div>
   </div>
 </div>
 
