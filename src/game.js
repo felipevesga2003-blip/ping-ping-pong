@@ -44,14 +44,15 @@ function makeChar(idx) {
     ai: false, remote: false, charging: false, charge: 0, chargeType: 'top',
     swing: 0, swingType: 'top', backhand: false, cd: 0, pending: null, swingCount: 0,
     celebrate: 0, mood: 0, keys: { x: 0, z: 0 }, pc: null, pcTimer: 0, emote: null,
-    pad: C.PADDLES.balanced,
+    pad: C.PADDLES.balanced, boost: { agi: 1, str: 1, ref: 1, reach: 1 },
     aiS: { timer: 0, pc: null, hitId: -1, lead: 0, type: 'top', power: 0.5, swungId: -1, serveT: 1.2, serveX: 0, emoteT: 0 },
   };
   return c;
 }
 
 // opts: { online, mode:'1v1'|'2v2', firstServer (equipo), target, bestOf,
-//         ctrl: ['human'|'ai'|'remote', …] por índice local, paddles: [tipo, …] }
+//         ctrl: ['human'|'ai'|'remote', …] por índice local, paddles: [tipo, …],
+//         pads: [estadísticas de pala ya calculadas, …], boosts: [{agi,str,ref,reach}, …] }
 export function newMatch(demo, opts = {}) {
   G.demo = demo;
   G.online = !!opts.online;
@@ -63,7 +64,8 @@ export function newMatch(demo, opts = {}) {
   const ctrl = opts.ctrl || G.chars.map((_, i) => (i === 0 && !demo ? 'human' : 'ai'));
   G.chars.forEach((c, i) => {
     c.ai = ctrl[i] === 'ai'; c.remote = ctrl[i] === 'remote';
-    c.pad = C.PADDLES[(opts.paddles && opts.paddles[i]) || 'balanced'] || C.PADDLES.balanced;
+    c.pad = (opts.pads && opts.pads[i]) || C.PADDLES[(opts.paddles && opts.paddles[i]) || 'balanced'] || C.PADDLES.balanced;
+    if (opts.boosts && opts.boosts[i]) c.boost = { ...c.boost, ...opts.boosts[i] };
     c.x = homeX(c);
   });
   G.firstServer = opts.firstServer ?? (Math.random() < 0.5 ? 0 : 1);
@@ -75,6 +77,15 @@ export function newMatch(demo, opts = {}) {
   acc = 0;
   emit('match', {});
   startServe();
+}
+// Cambiar de estilo en mitad del partido: la pala vuelve a la mano del jugador
+export function setControl(mode) {
+  G.control = mode;
+  const c = G.chars[0]; if (!c) return;
+  c.charging = false; c.charge = 0; c.pending = null;
+  const h = G.hand;
+  h.x = h.tx = c.x + c.hand * 0.35; h.y = h.ty = 1.0; h.z = c.z - c.sign * 0.3;
+  h.vx = h.vy = 0; h.roll = h.rollTarget = 0; h.stretch = 0;
 }
 export function setPaddle(i, type) { if (G.chars[i]) G.chars[i].pad = C.PADDLES[type] || C.PADDLES.balanced; }
 
@@ -159,6 +170,7 @@ export function update(dt) {
   }
 }
 
+export const freeR = c => C.FREE_HIT_R * Math.sqrt(c.pad.ctrl * c.boost.ref);
 const isFree = () => G.control === 'free' && G.chars[0] && !G.chars[0].ai;
 // ¿le toca a este jugador devolver la bola?
 const myTurn = c => G.ball.lastHitter === 1 - c.team && (!is2v2() || G.turn[c.team] === c.idx);
@@ -191,7 +203,7 @@ function ballStep(dt) {
       const f = (h.z - pz) / ((b.z - pz) || 1e-6);
       const cx = px + (b.x - px) * f, cy = py + (b.y - py) * f;
       const d = Math.hypot(cx - h.x, cy - h.y);
-      if (d < C.FREE_HIT_R * Math.sqrt(pc.pad.ctrl)) { b.x = cx; b.y = cy; b.z = h.z; freeHit(pc, d, false); }
+      if (d < freeR(pc)) { b.x = cx; b.y = cy; b.z = h.z; freeHit(pc, d, false); }
     }
   }
   b.sinceHit += dt;
@@ -371,7 +383,8 @@ function updateHand(c, dt) {
   const sx = c.x + c.hand * 0.12, sy = 0.86;
   let dx = h.tx - sx, dy = h.ty - sy;
   const L = Math.hypot(dx, dy);
-  if (L > C.FREE_REACH) { dx *= C.FREE_REACH / L; dy *= C.FREE_REACH / L; }
+  const reach = C.FREE_REACH * c.boost.reach;
+  if (L > reach) { dx *= reach / L; dy *= reach / L; }
   const tx = sx + dx, ty = Math.max(TABLE_H - 0.3, sy + dy);
   const ox = h.x, oy = h.y;
   const k = 1 - Math.exp(-30 * dt);
@@ -380,17 +393,17 @@ function updateHand(c, dt) {
   const s = 1 - Math.exp(-25 * dt);
   h.vx += (ivx - h.vx) * s; h.vy += (ivy - h.vy) * s;
   h.roll += (h.rollTarget - h.roll) * Math.min(1, dt * 14);
-  h.stretch = Math.min(1, L / C.FREE_REACH);
+  h.stretch = Math.min(1, L / reach);
 }
 
 function playerUpdate(c, dt) {
-  const k = c.keys, sp = (k.x || k.z || !G.assist) ? C.PLAYER_SPEED : C.ASSIST_SPEED;
+  const k = c.keys, sp = ((k.x || k.z || !G.assist) ? C.PLAYER_SPEED : C.ASSIST_SPEED) * c.boost.agi;
   if (k.x || k.z || !G.assist) { steer(c, k.x * sp, k.z * sp, dt); return; }
   const b = G.ball;
   if (is2v2() && G.phase === 'rally' && b.lastHitter === 1 - c.team && !myTurn(c)) { stepAside(c, sp, dt); return; }
   if (G.control === 'free') {
     // el cuerpo sigue a la pala con retraso (el brazo se estira mientras tanto)
-    moveTo(c, G.hand.x - c.hand * 0.4, c.sign * (HALF_L + 0.55), C.FREE_BODY_SPEED, dt);
+    moveTo(c, G.hand.x - c.hand * 0.4, c.sign * (HALF_L + 0.55), C.FREE_BODY_SPEED * c.boost.agi, dt);
     return;
   }
   let tx = c.x, tz = c.sign * (HALF_L + 0.55);
@@ -430,7 +443,7 @@ function trySwing(c, type, power) {
   if (!myTurn(c)) return whiff(c, '¡LE TOCA A TU COMPAÑERO!');
   const pz = paddleZ(c);
   const past = (b.z - pz) * c.sign;
-  const win = C.WIN_T * c.pad.ctrl;
+  const win = C.WIN_T * c.pad.ctrl * c.boost.ref;
   let dt, pt;
   if (past >= 0) {
     if (b.count !== 1) return whiff(c, '¡NO BOTÓ!');
@@ -442,7 +455,7 @@ function trySwing(c, type, power) {
   }
   if (dt > win) return whiff(c, '¡MUY PRONTO!');
   if (dt < -win * 0.75) return whiff(c, '¡TARDE!');
-  if (Math.abs(pt.x - c.x) > C.REACH || pt.y < TABLE_H - 0.2 || pt.y > TABLE_H + 1.15) return whiff(c, '¡NO LLEGAS!');
+  if (Math.abs(pt.x - c.x) > C.REACH * c.boost.reach || pt.y < TABLE_H - 0.2 || pt.y > TABLE_H + 1.15) return whiff(c, '¡NO LLEGAS!');
   const q = 1 - Math.abs(dt) / win;
   if (dt > 0) c.pending = { type, power, q, bias: 1 };
   else hitBall(c, type, power, q, -1, false);
@@ -490,7 +503,7 @@ function hitBall(c, type, power, q, bias, serve) {
   else if (smash) { vh = (8.5 + 3 * power) * rf * pad.smash; top = 30; }
   else if (type === 'top') { vh = (4.6 + 3.6 * power) * rf; top = 60 + 80 * power; }
   else { vh = (3.6 + 1.6 * power) * rf; top = -(50 + 50 * power); }
-  if (!serve) vh *= (0.85 + 0.15 * q) * pad.speed;
+  if (!serve) vh *= (0.85 + 0.15 * q) * pad.speed * c.boost.str;
   top *= pad.spin;
   const side = (c.ai ? randn() * D.side : clamp(G.flick, -110, 110)) * pad.spin;
   launch(c, start, tg, vh, top, side, q, serve, smash, type, power);
@@ -502,7 +515,7 @@ function hitBall(c, type, power, q, bias, serve) {
 function freeHit(c, d, serve) {
   const b = G.ball, h = G.hand, pad = c.pad;
   c.pending = null;
-  const q = serve ? 1 : clamp(1 - d / (C.FREE_HIT_R * Math.sqrt(pad.ctrl)), 0, 1);
+  const q = serve ? 1 : clamp(1 - d / freeR(c), 0, 1);
   const speed = Math.hypot(h.vx, h.vy);
   const power = clamp(0.22 + speed / 5.5, 0.22, 1);
   const smash = !serve && b.y > TABLE_H + C.SMASH_H && (h.vy < -1.2 || speed > 3.2);
@@ -516,7 +529,7 @@ function freeHit(c, d, serve) {
   const rf = 1 + Math.min(0.3, G.rally * 0.02);
   const top = (smash ? 30 : clamp(h.vy * 28, -110, 140)) * pad.spin;
   let vh = smash ? (9 + 3 * power) * rf * pad.smash : serve ? 3.8 + 2.2 * power : (3.8 + 4.4 * power) * rf;
-  if (!serve) vh *= (0.85 + 0.15 * q) * pad.speed;
+  if (!serve) vh *= (0.85 + 0.15 * q) * pad.speed * c.boost.str;
   const side = clamp(-(h.vx * 16 + h.roll * 38), -110, 110) * pad.spin;
   const type = top < -10 ? 'back' : 'top';
   c.swing = C.SWING_DUR; c.swingType = type;

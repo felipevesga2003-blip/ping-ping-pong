@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import * as C from './config.js';
 import * as P from './physics.js';
-import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ } from './game.js';
+import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR } from './game.js';
 import { createSky, createTable, createBall } from './models.js';
 import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDist } from './character.js';
 import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot, doEmote } from './game.js';
@@ -14,6 +14,9 @@ import { createReferee } from './referee.js';
 import { createFX } from './fx.js';
 import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume } from './audio.js';
 import { createMenu, renderControls, CONTROLS } from './ui.js';
+import { P as PR, sanitizeLook, boosts, padStats, matchReward, recordMatch, setNamed, isOwned, save as saveProgress, charLevel } from './progress.js';
+import { createWorkshop, coinHTML } from './workshop.js';
+import { createLobby } from './lobby.js';
 
 const $ = id => document.getElementById(id);
 const DEBUG = new URLSearchParams(location.search).get('debug');
@@ -72,10 +75,18 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
+// la pala activa del Taller manda sobre el aspecto de la raqueta
+function syncPaddleLook() {
+  const p = PR.paddles[PR.active];
+  settings.look.paddleType = isOwned('paddle', p.type) ? p.type : 'balanced';
+  settings.look.paddleColor = p.color;
+}
+syncPaddleLook();
+const playLook = () => sanitizeLook(settings.look);   // lo que ven los demás y lo que se juega (sin prendas por comprar)
 
 // ---------- Jugadores y personajes ----------
 // roster: un jugador por índice local (0 yo · 1 rival · 2 compañero · 3 rival 2)
@@ -104,7 +115,7 @@ function buildViews() {
   roster.forEach((p, i) => {
     const team = i % 2;
     let look;
-    if (i === 0) look = settings.look;
+    if (i === 0) look = screen === 'menu' ? settings.look : playLook();
     else if (p.ctrl === 'remote' || p.remoteLook) look = { ...DEFAULT_LOOK, ...p.look, shirtColor: teamShirts[team] };
     else {
       const ci = Math.max(0, CPU_LOOKS.indexOf(p.look));
@@ -122,6 +133,9 @@ function buildViews() {
 }
 const rebuildPlayer = () => buildViews();
 const paddlesOf = () => roster.map((p, i) => (i === 0 ? settings.look.paddleType : p.look.paddleType) || 'balanced');
+// mi pala con sus mejoras y mis habilidades; el resto juega con la base de su tipo
+const padsOf = () => roster.map((p, i) => (i === 0 ? padStats() : C.PADDLES[p.look.paddleType] || C.PADDLES.balanced));
+const boostsOf = () => roster.map((p, i) => (i === 0 ? boosts() : null));
 function applySettings() {
   G.diff = +settings.diff; G.target = +settings.target; G.assist = !!+settings.assist; G.control = settings.control;
   try { localStorage.setItem('ppp-settings', JSON.stringify(settings)); } catch (e) { /* sin storage */ }
@@ -144,7 +158,7 @@ function startGame() {
   enterGame(); show('netTag', false);
   roster = cpuRoster(settings.mode);
   buildViews();
-  newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf() });
+  newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf() });
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
@@ -160,7 +174,7 @@ function setPause(on) {
   if (screen === 'menu' || (G.phase === 'over' && on)) return;
   screen = on ? 'pause' : 'game';
   show('pause', on);
-  show('restartBtn', !G.online); show('pauseOnline', G.online);
+  show('restartBtn', !G.online); show('pauseOnline', G.online); refreshPauseStyle();
   if (on) {
     releaseCharge(G.chars[0]);
     $('pS0').textContent = G.score[0]; $('pS1').textContent = G.score[1];
@@ -176,6 +190,7 @@ function openPrelobby(kind) {
   $('plGoTxt').textContent = kind === 'online' ? 'Crear sala' : '¡A jugar!';
   $('plDiffLbl').textContent = kind === 'online' ? 'CPU de relleno' : 'Rival';
   $('plDiffDesc').textContent = kind === 'online' ? 'Nivel de la CPU si faltan jugadores' : 'Nivel de la CPU';
+  show('plVisRow', kind === 'online');
   refreshPrelobby(); show('prelobby', true);
 }
 function refreshPrelobby() {
@@ -183,8 +198,10 @@ function refreshPrelobby() {
   $('plModeDesc').textContent = settings.mode === '2v2'
     ? (plFor === 'online' ? 'Hasta 4 jugadores: dos equipos de dos' : 'Tú y un compañero CPU contra dos CPU')
     : (plFor === 'online' ? 'Tú contra otro jugador' : 'Tú contra la CPU');
-  const pt = C.PADDLES[settings.look.paddleType] || C.PADDLES.balanced;
-  $('plPaddleDesc').textContent = `${pt.name} · ${pt.desc}`;
+  const pt = C.PADDLES[settings.look.paddleType] || C.PADDLES.balanced, pad = PR.paddles[PR.active];
+  const ups = Object.values(pad.up).reduce((a, b) => a + b, 0);
+  $('plPaddleDesc').textContent = `${pad.name} · ${pt.name}${ups ? ' · ' + ups + ' mejoras' : ''}`;
+  $('plPads').innerHTML = PR.paddles.map((p, i) => `<button data-i="${i}" class="${i === PR.active ? 'on' : ''}"><i class="pdot" style="background:${p.color}"></i>${p.name.replace(/[<>&"]/g, '')}</button>`).join('');
 }
 document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -194,7 +211,10 @@ const prelobbyOpen = () => !$('prelobby').classList.contains('hidden');
 function prelobbyGo() { show('prelobby', false); if (plFor === 'online') online.host(); else startGame(); }
 $('plGo').onclick = prelobbyGo;
 $('plBack').onclick = () => { show('prelobby', false); SFX.blip(); };
-$('plPaddle').onclick = () => { show('prelobby', false); menu.go('char'); if (menu.charTab) menu.charTab('paddle'); };
+$('plPads').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  PR.active = +b.dataset.i; saveProgress(); paddleChanged(); SFX.blip(); refreshPrelobby();
+});
 
 // ---------- Online ----------
 let rematch = { me: false, them: new Set() }, stTimer = 0;
@@ -208,8 +228,9 @@ function localOf(s) {
 function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) return s; return li; }
 const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
-  getLook: () => settings.look,
-  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target }),
+  getLook: () => playLook(),
+  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public' }),
+  onRoomInfo: r => lobby.setRoom(r),
   botLook: s => ({ ...CPU_LOOKS[(+settings.diff + s) % 4] }),
   blip: () => { initAudio(); SFX.blip(); },
   openPrelobby,
@@ -239,12 +260,12 @@ function startOnline(m) {
   roster = [];
   for (let li = 0; li < n; li++) {
     const s = globalOf(li), p = m.players.find(x => x.slot === s) || { look: CPU_LOOKS[0], bot: true };
-    roster[li] = { look: { ...DEFAULT_LOOK, ...p.look }, ctrl: s === g ? 'human' : p.bot && online.S.isHost ? 'ai' : 'remote', slot: s };
+    roster[li] = { look: { ...DEFAULT_LOOK, ...(s === g ? playLook() : p.look) }, ctrl: s === g ? 'human' : p.bot && online.S.isHost ? 'ai' : 'remote', slot: s };
   }
   buildViews();
   newMatch(false, {
     online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
-    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(),
+    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(),
   });
   if (DEBUG === 'bot') G.chars[0].ai = true;
   refreshHUD();
@@ -279,6 +300,7 @@ function tryRematch() {
 
 // estado del giro en el vestidor (debe existir antes de crear el menú: onPane lo usa al iniciar)
 const rot = { auto: true, yaw: 0, vel: 0, drag: false, lastX: 0 };
+let menuApi = null;
 const menu = createMenu({
   settings,
   onChange: applySettings,
@@ -286,11 +308,112 @@ const menu = createMenu({
   blip: () => { initAudio(); SFX.blip(); },
   onLook: nameOnly => {
     applySettings(); if (!nameOnly) rebuildPlayer();
-    // en una sala, el rival ve tus cambios al momento
-    online.sendLook(settings.look);
+    // en una sala, el rival ve tus cambios al momento (sin lo que aún no has comprado)
+    online.sendLook(playLook());
+    refreshCoins();
   },
-  onPane: id => { menuPane = id; rot.auto = true; rot.vel = 0; $('menu').classList.toggle('posing', id === 'char'); },
+  onBuy: () => { SFX.coin(); refreshCoins(); toast('¡Comprado! Ya es tuyo', 'ok'); },
+  deny: msg => { SFX.deny(); toast(msg, 'bad'); },
+  onPane: id => {
+    // al salir del vestidor se quita lo que solo te estabas probando
+    if (menuPane === 'char' && id !== 'char' && menuApi && menuApi.stripLocked()) { menuApi.renderChar(); applySettings(); rebuildPlayer(); online.sendLook(playLook()); }
+    menuPane = id; rot.auto = true; rot.vel = 0; $('menu').classList.toggle('posing', id === 'char');
+    if (!menuApi) return;                       // primera llamada: aún se está creando el menú
+    if (id === 'shop') workshop.render();
+    if (id === 'online') lobby.start(); else lobby.stop();
+  },
 });
+menuApi = menu;
+
+// ---------- Taller, monedas y avisos ----------
+function paddleChanged(nameOnly) {
+  syncPaddleLook(); applySettings();
+  if (!nameOnly) rebuildPlayer();
+  online.sendLook(playLook()); refreshCoins();
+}
+const workshop = createWorkshop({
+  blip: () => { initAudio(); SFX.blip(); },
+  buySound: () => { initAudio(); SFX.coin(); },
+  onPaddle: paddleChanged,
+  onCoins: refreshCoins,
+  deny: msg => { initAudio(); SFX.deny(); toast(msg, 'bad'); },
+});
+function refreshCoins() {
+  $('coinCount').textContent = PR.coins; $('wsCoins').textContent = PR.coins;
+  $('profileName').textContent = settings.look.name || 'Tú';
+  const pad = PR.paddles[PR.active];
+  $('navShop').textContent = `Frijolito nv. ${charLevel()} · ${pad.name}`;
+}
+let toastT = 0;
+function toast(msg, kind = '') {
+  const t = $('toast'); t.innerHTML = msg; t.className = 'show ' + kind;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.className = kind; }, 2400);
+}
+$('coinChip').onclick = () => { SFX.blip(); menu.go('shop'); };
+
+// ---------- Perfil ----------
+let profileOpen = false, pendingJoin = null;
+function openProfile(first) {
+  profileOpen = true; show('profile', true);
+  $('pfKicker').textContent = first ? 'Bienvenido al Torneo del Parque' : 'Tu perfil';
+  $('pfTitle').textContent = first ? '¿Cómo te llamas?' : 'Tu perfil';
+  show('pfText', first); show('pfClose', !first); show('pfStats', !first);
+  $('pfName').value = first && settings.look.name === 'Tú' ? '' : settings.look.name;
+  const s = PR.stats;
+  $('pfStats').innerHTML = `<div><b>${s.played}</b><span>Partidos</span></div><div><b>${s.wins}</b><span>Victorias</span></div>` +
+    `<div><b>${PR.earned}</b><span>Pongcoins ganadas</span></div><div><b>${charLevel()}</b><span>Nivel</span></div>`;
+  $('pfGo').querySelector('span').textContent = first ? '¡A jugar!' : 'Guardar';
+  setTimeout(() => $('pfName').focus(), 80);
+}
+function saveProfile() {
+  const v = $('pfName').value.trim().slice(0, 10);
+  if (!v) { $('pfName').classList.remove('shake'); void $('pfName').offsetWidth; $('pfName').classList.add('shake'); $('pfName').focus(); return; }
+  const first = !PR.named;
+  settings.look.name = v; setNamed(v); applySettings();
+  profileOpen = false; show('profile', false);
+  menu.refresh(); menu.renderChar(); refreshCoins(); rebuildPlayer(); online.sendLook(playLook());
+  initAudio(); SFX.select();
+  if (first) toast(`¡Hola, ${v.replace(/[<>&"]/g, '')}! Te regalamos ${coinHTML(PR.coins)} para tu primera compra`, 'ok');
+  if (pendingJoin) { const code = pendingJoin; pendingJoin = null; menu.go('online'); online.join(code); }
+}
+function closeProfile() { if (!PR.named) return; profileOpen = false; show('profile', false); }
+$('pfGo').onclick = saveProfile;
+$('pfClose').onclick = closeProfile;
+$('profileBtn').onclick = () => { SFX.blip(); openProfile(false); };
+
+// ---------- Salas públicas ----------
+const lobby = createLobby({
+  onList: rooms => { pubRooms = rooms; renderPub(); },
+  onState: s => { pubState = s; renderPub(); },
+});
+let pubRooms = [], pubState = 'search';
+function renderPub() {
+  const mine = online.S.code;
+  const list = pubRooms.filter(r => r.code !== mine);
+  const open = list.filter(r => !r.playing && r.n < r.max).length;
+  $('pubState').textContent = pubState === 'error' ? 'Sin conexión' : pubState === 'search' ? 'Buscando…' : open ? `${open} disponible${open > 1 ? 's' : ''}` : 'Ninguna abierta';
+  $('pubState').className = 'pub-state ' + pubState;
+  $('pubList').innerHTML = list.length ? list.map(r => {
+    const full = r.n >= r.max, busy = r.playing;
+    return `<div class="pub-row${busy || full ? ' off' : ''}"><svg class="bean"><use href="#i-bean"/></svg>
+      <div class="pub-info"><b>Sala de ${r.name.replace(/[<>&"]/g, '')}</b><span>${r.mode === '2v2' ? '2 contra 2' : '1 contra 1'} · ${r.bestOf > 1 ? 'mejor de ' + r.bestOf : 'un juego'} · a ${r.target}</span></div>
+      <i class="pub-n">${r.n}/${r.max}</i>
+      <button class="pub-join" data-code="${r.code}" ${busy || full ? 'disabled' : ''}>${busy ? 'En juego' : full ? 'Llena' : 'Unirse'}</button></div>`;
+  }).join('') : `<p class="pub-empty">${pubState === 'ok' ? 'No hay salas públicas ahora mismo. Crea una y márcala como <b>Pública</b>.' : pubState === 'error' ? 'No se pudo contactar con el tablón de salas.' : 'Buscando salas…'}</p>`;
+}
+$('pubList').addEventListener('click', e => { const b = e.target.closest('.pub-join'); if (b && !b.disabled) online.join(b.dataset.code); });
+
+// ---------- Cambio de estilo durante el partido ----------
+function refreshPauseStyle() { $('pauseStyleTxt').textContent = 'Cambiar a ' + CONTROLS[settings.control === 'free' ? 'classic' : 'free'].name; }
+function toggleStyle() {
+  settings.control = settings.control === 'free' ? 'classic' : 'free';
+  applySettings(); setControl(settings.control);
+  renderControls(settings.control); $('controls').classList.toggle('off', !+settings.showControls);
+  menu.refresh(); refreshPauseStyle(); hint('');
+  const tag = $('camTag'); tag.textContent = 'Estilo: ' + CONTROLS[settings.control].name; tag.classList.add('on'); camTagTimer = 1.6;
+  initAudio(); SFX.select();
+}
+$('pauseStyle').onclick = toggleStyle;
 
 // ---------- Vestidor: girar al frijolito arrastrando ----------
 $('menu').addEventListener('pointerdown', e => {
@@ -536,6 +659,15 @@ onEvent((type, d) => {
       `<div><b>${G.stats.perfect[0]}</b><span>Perfectos</span></div>` +
       `<div><b>${G.stats.smash[0]}</b><span>Smashes</span></div>` +
       `<div><b>${G.stats.aces[0]}</b><span>Aces</span></div>`;
+    // Pongcoins: solo para el ganador
+    const reward = won ? matchReward({ online: G.online, diff: G.diff, target: G.target, bestOf: G.bestOf }) : 0;
+    recordMatch(won, reward); refreshCoins();
+    const rw = $('overReward'); rw.classList.remove('hidden');
+    rw.className = 'reward ' + (won ? 'won' : 'lost');
+    rw.innerHTML = won
+      ? `<span class="rw-plus">+${reward}</span><svg><use href="#i-coin"/></svg><div><b>Pongcoins</b><span>Total: ${PR.coins} · gástalas en el vestidor y el Taller</span></div>`
+      : `<svg><use href="#i-coin"/></svg><div><b>Sin Pongcoins esta vez</b><span>Solo gana monedas quien gana el partido · tienes ${PR.coins}</span></div>`;
+    if (won) setTimeout(() => SFX.coin(), 600);
     show('over', true);
     if (won) fx.confetti(tmpV.set(0, 2, 0), 120);
   }
@@ -603,6 +735,7 @@ if (matchMedia('(pointer: coarse)').matches) { $('touch').classList.remove('hidd
 const ACT_TOP = ['Space', 'KeyJ'], ACT_BACK = ['KeyK', 'ShiftLeft', 'ShiftRight'];
 addEventListener('keydown', e => {
   initAudio();
+  if (profileOpen) { if (e.code === 'Enter') { e.preventDefault(); saveProfile(); } else if (e.code === 'Escape') closeProfile(); return; }
   if (settingsOpen) { if (e.code === 'Escape' || e.code === 'Enter') { e.preventDefault(); openSettings(false); } return; }
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Enter' || e.code === 'Escape') e.target.blur(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -618,6 +751,7 @@ addEventListener('keydown', e => {
     if (menuPane === 'online' && (e.code === 'Enter' || e.code === 'Space')) { if (online.S.active) online.start(); return; }
     menu.key(e.code); return;
   }
+  if (e.code === 'Tab') { e.preventDefault(); if (G.phase !== 'over') toggleStyle(); return; }
   if (e.code === 'Escape' || e.code === 'KeyP') { if (screen === 'game') setPause(true); else if (screen === 'pause') setPause(false); return; }
   if (screen !== 'game') return;
   if (G.phase === 'over') { if (e.code === 'Enter') again(); else if (e.code === 'Escape') toMenu(); return; }
@@ -736,9 +870,10 @@ function drawOverlay() {
       const r = P.simToPlane(b, h.z, c.sign, 0, b.count === 1, 1.2);
       if (r && r.ok && r.t < 1.1) {
         const s = toScreen(tmpV.set(r.x, r.y, r.z));
-        const rpx = Math.abs(toScreen(tmpV.set(r.x + C.FREE_HIT_R, r.y, r.z)).x - s.x);
+        const R = freeR(c);
+        const rpx = Math.abs(toScreen(tmpV.set(r.x + R, r.y, r.z)).x - s.x);
         const d = Math.hypot(r.x - h.x, r.y - h.y);
-        const good = d < C.FREE_HIT_R * 0.55, ok = d < C.FREE_HIT_R;
+        const good = d < R * 0.55, ok = d < R;
         octx.setLineDash([6, 6]);
         ring(s, rpx, 'rgba(255,255,255,0.55)', 2);
         octx.setLineDash([]);
@@ -752,7 +887,7 @@ function drawOverlay() {
     const r = P.simToPlane(b, paddleZ(c), c.sign, 0, b.count === 1, 1.2);
     if (r && r.ok && r.t < 1.1) {
       const s = toScreen(tmpV.set(r.x, r.y, r.z));
-      const reach = Math.abs(r.x - c.x) <= C.REACH;
+      const reach = Math.abs(r.x - c.x) <= C.REACH * c.boost.reach;
       const now = r.t < C.WIN_T * 0.3;
       const rad = 15 + r.t * 180;
       octx.lineCap = 'round';
@@ -889,13 +1024,15 @@ requestAnimationFrame(frame);
     const ld = document.getElementById('loader'); if (!ld) return;
     ld.classList.add('done'); clearInterval(window.__pppTips);
     setTimeout(() => ld.remove(), 800);
+    if (!PR.named && !DEBUG) openProfile(true);
   }, wait);
 })();
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
-window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee };
+window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update };
+refreshCoins();
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');
-if (salaParam) { menu.go('online'); online.join(salaParam); }
+if (salaParam) { if (PR.named || DEBUG) { menu.go('online'); online.join(salaParam); } else pendingJoin = salaParam; }
 if (DEBUG === 'bot' && new URLSearchParams(location.search).get('host')) { const pm = new URLSearchParams(location.search).get('mode'); if (pm) settings.mode = pm; menu.go('online'); online.host(); }
 if (DEBUG === 'play') {
   startGame(); G.chars[0].ai = true;

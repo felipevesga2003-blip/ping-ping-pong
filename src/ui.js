@@ -1,7 +1,9 @@
 // =============================================================
 //  Interfaz: menú principal, selectores, ayuda, panel de controles
 // =============================================================
-import { DIFFS, PADDLES } from './config.js';
+import { DIFFS } from './config.js';
+import { P, PRICE, isOwned, lockedIn, sanitizeLook, buyOutfit, buyPieces } from './progress.js';
+import { coinHTML } from './workshop.js';
 import { SKINS, SHIRT_COLORS, PANTS_COLORS, PADDLE_COLORS, HEIGHTS, WIDTHS, EYES, EARS, SHIRTS, PANTS, HATS, GLASSES, FACES, NECKS, BACKS, OUTFITS, DEFAULT_LOOK, CPU_LOOKS, randomLook, cpuLookFor } from './character.js';
 const HAIR_COLORS = ['#3a2416', '#5b3a29', '#2b2420', '#e07a2b', '#e8b931', '#f2eee6', '#ff5fb2', '#3b9bff'];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -57,7 +59,7 @@ export function renderControls(mode) {
   $('controls').innerHTML =
     `<div class="ctl-head"><b>Controles</b><span class="ctl-mode">${c.name}</span></div>` +
     c.rows.map(([k, t]) => `<div class="ctl"><kbd>${k}</kbd><span>${t}</span></div>`).join('') +
-    `<div class="ctl-foot"><kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`;
+    `<div class="ctl-foot"><kbd>Tab</kbd> estilo <kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`;
 }
 
 // Guía "Cómo jugar": pasos numerados + cómo hacer cada efecto, por estilo de control
@@ -100,7 +102,7 @@ function renderHelp(mode = helpMode) {
     <div class="steps">${h.steps.map(([t, d], i) => `<div class="step"><i class="n">${i + 1}</i><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
     <div class="fx-title">Efectos</div>
     <div class="fx-grid">${h.fx.map(([c, t, how, d]) => `<div class="fx ${c}"><b>${t}</b><kbd class="how">${how}</kbd><span>${d}</span></div>`).join('')}</div>
-    <div class="help-common"><span><kbd>Rueda</kbd> cámara · al tope, 1ª persona</span><span><kbd>P</kbd> pausa</span><span><kbd>M</kbd> sonido</span><span><kbd>H</kbd> ocultar controles</span></div>
+    <div class="help-common"><span><kbd>Rueda</kbd> cámara · al tope, 1ª persona</span><span><kbd>Tab</kbd> cambiar de estilo en partido</span><span><kbd>P</kbd> pausa</span><span><kbd>M</kbd> sonido</span><span><kbd>H</kbd> ocultar controles</span></div>
   </div>`;
 }
 
@@ -108,7 +110,7 @@ function renderHelp(mode = helpMode) {
 const NAV = [...document.querySelectorAll('.nav-item')].map(el => el.dataset.id);
 const LOOK_OPTS = { height: HEIGHTS, width: WIDTHS, eyes: EYES, ears: EARS, shirt: SHIRTS, pants: PANTS, hat: HATS, glasses: GLASSES, face: FACES, neck: NECKS, back: BACKS };
 
-export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane }) {
+export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane, onBuy, deny }) {
   let sel = 0;
   const items = [...document.querySelectorAll('.nav-item')];
 
@@ -136,20 +138,47 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     look()[k] = opts[(i + d + opts.length) % opts.length][0];
     lookChanged(k); blip();
   }
-  const sel3 = (k, label) => `<div class="csel" data-k="${k}"><span>${label}</span><div><button class="arr" data-d="-1">‹</button><b class="v">${esc((LOOK_OPTS[k].find(o => String(o[0]) === String(look()[k])) || LOOK_OPTS[k][0])[1])}</b><button class="arr" data-d="1">›</button></div></div>`;
+  const nameOf = (k, id) => (LOOK_OPTS[k].find(o => String(o[0]) === String(id)) || LOOK_OPTS[k][0])[1];
+  const sel3 = (k, label) => {
+    const lk = !isOwned(k, look()[k]);
+    return `<div class="csel${lk ? ' locked' : ''}" data-k="${k}"><span>${label}${lk ? `<i class="lk-price"><svg><use href="#i-lock"/></svg>${PRICE}</i>` : ''}</span><div><button class="arr" data-d="-1">‹</button><b class="v">${esc(nameOf(k, look()[k]))}</b><button class="arr" data-d="1">›</button></div></div>`;
+  };
+  // Probador: lo bloqueado se puede ver puesto; para jugar con ello hay que comprarlo
+  let tryOutfit = null;
+  function buyInfo() {
+    const locked = lockedIn(look());
+    if (!locked.length) return null;
+    const o = tryOutfit && !isOwned('outfit', tryOutfit) ? OUTFITS.find(x => x.id === tryOutfit) : null;
+    if (o && locked.some(([k, id]) => o.look[k] === id)) {
+      const rest = locked.filter(([k, id]) => o.look[k] !== id);
+      return { outfit: o, rest, cost: PRICE * (1 + rest.length), names: ['Outfit ' + o.name, ...rest.map(([k, id]) => nameOf(k, id))] };
+    }
+    return { rest: locked, cost: PRICE * locked.length, names: locked.map(([k, id]) => nameOf(k, id)) };
+  }
+  function buyBar() {
+    const b = buyInfo(); if (!b) return '';
+    return `<div class="buybar"><div class="bb-txt"><b>Probándote</b><span>${esc(b.names.join(' · '))}</span></div>
+      <button class="bb-buy${P.coins >= b.cost ? '' : ' poor'}">Comprar ${coinHTML(b.cost)}</button><button class="bb-undo" title="Quitar lo que no tienes">Quitar</button></div>`;
+  }
+  function stripLocked() {
+    if (!lockedIn(look()).length) return false;
+    const s = sanitizeLook(look());
+    for (const k of Object.keys(s)) if (k !== 'paddleType' && k !== 'paddleColor') look()[k] = s[k];
+    tryOutfit = null; return true;
+  }
   const swRow = (k, label, list, extra = '') => `<div class="swatch-row"><span>${label}</span><div class="swatches" data-k="${k}">${extra}${list.map(c => `<button class="sw${look()[k] === c ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>`;
   const autoSw = (k, txt) => `<button class="sw auto${look()[k] ? '' : ' on'}" data-c="" title="${txt}">${txt}</button>`;
   const TABS = {
     body: { name: 'Cuerpo', html: () => swRow('skin', 'Piel', SKINS) + `<div class="cgrid">${sel3('height', 'Altura')}${sel3('width', 'Complexión')}${sel3('eyes', 'Ojos')}${sel3('ears', 'Orejas')}</div>` },
     clothes: { name: 'Ropa', html: () => `<div class="cgrid">${sel3('shirt', 'Parte de arriba')}${sel3('pants', 'Pantalón')}</div>` + swRow('shirtColor', 'Equipación', SHIRT_COLORS) + swRow('pantsColor', 'Pantalón', PANTS_COLORS) + swRow('accent', 'Secundario', SHIRT_COLORS) + swRow('shoes', 'Zapatos', ['#ffffff', '#1c1c24', '#e0352b', '#2547b8', '#6b4a2b', '#7b4bd1', '#ffc93c', '#3fae3f']) },
     acc: { name: 'Accesorios', html: () => `<div class="cgrid">${sel3('hat', 'Sombrero')}${sel3('glasses', 'Gafas')}${sel3('face', 'Cara')}${sel3('neck', 'Cuello')}${sel3('back', 'Espalda')}</div>` + swRow('hatColor', 'Sombrero', SHIRT_COLORS, autoSw('hatColor', 'Auto')) + swRow('hairColor', 'Pelo', HAIR_COLORS) + swRow('gloves', 'Guantes', ['#ffffff', '#1c1c24', '#e0352b', '#ffc93c'], autoSw('gloves', 'Sin')) },
-    paddle: { name: 'Raqueta', html: () => `<div class="pad-grid">${Object.entries(PADDLES).map(([id, p]) => `<button class="pad-card${(look().paddleType || 'balanced') === id ? ' on' : ''}" data-p="${id}"><b>${p.name}</b><span>${p.desc}</span>${['speed', 'spin', 'ctrl', 'smash'].map(s => `<i class="stat"><em>${STAT_NAMES[s]}</em><u style="width:${Math.round(((p[s] - 0.8) / 0.6) * 100)}%"></u></i>`).join('')}</button>`).join('')}</div>` + swRow('paddleColor', 'Goma', PADDLE_COLORS) },
-    outfits: { name: 'Outfits', html: () => `<div class="outfit-grid">${OUTFITS.map(o => `<button class="outfit" data-o="${o.id}"><svg class="bean" style="color:${o.look.skin || look().skin}"><use href="#i-bean"/></svg><i class="o-shirt" style="background:${o.look.shirt === 'none' ? (o.look.pantsColor || '#2c3a66') : o.look.shirt === 'overalls' ? o.look.shirtColor : o.look.shirtColor || '#fff'}"></i><b>${o.name}</b></button>`).join('')}</div><p class="outfit-note">Un clic viste a tu frijolito completo. Después puedes retocar cualquier prenda.</p>` },
+    outfits: { name: 'Outfits', html: () => `<div class="outfit-grid">${OUTFITS.map(o => `<button class="outfit" data-o="${o.id}"><svg class="bean" style="color:${o.look.skin || look().skin}"><use href="#i-bean"/></svg><i class="o-shirt" style="background:${o.look.shirt === 'none' ? (o.look.pantsColor || '#2c3a66') : o.look.shirt === 'overalls' ? o.look.shirtColor : o.look.shirtColor || '#fff'}"></i><b>${o.name}</b>${isOwned('outfit', o.id) ? '' : `<i class="lock-badge"><svg><use href="#i-lock"/></svg>${PRICE}</i>`}</button>`).join('')}</div><p class="outfit-note">Un clic te lo prueba. Comprar un outfit (${PRICE} Pongcoins) desbloquea todas sus prendas.</p>` },
   };
-  const STAT_NAMES = { speed: 'Velocidad', spin: 'Efecto', ctrl: 'Control', smash: 'Remate' };
   function renderChar() {
     $('charTabs').innerHTML = Object.entries(TABS).map(([id, t]) => `<button data-t="${id}" class="${id === charTab ? 'on' : ''}">${t.name}</button>`).join('');
-    $('charContent').innerHTML = TABS[charTab].html();
+    const st = $('charContent').scrollTop;
+    $('charContent').innerHTML = buyBar() + TABS[charTab].html();
+    $('charContent').scrollTop = st;
   }
   $('charTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; charTab = b.dataset.t; renderChar(); blip(); });
   $('charContent').addEventListener('click', e => {
@@ -157,13 +186,19 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     if (arr && csel) return cycleLook(csel.dataset.k, +arr.dataset.d);
     const sw = e.target.closest('.sw'), box = e.target.closest('.swatches');
     if (sw && box) { look()[box.dataset.k] = sw.dataset.c || null; lookChanged(); blip(); return; }
-    const pc = e.target.closest('.pad-card');
-    if (pc) { look().paddleType = pc.dataset.p; lookChanged(); blip(); return; }
+    if (e.target.closest('.bb-undo')) { stripLocked(); lookChanged(); blip(); return; }
+    if (e.target.closest('.bb-buy')) {
+      const b = buyInfo(); if (!b) return;
+      if (P.coins < b.cost) { deny(`Te faltan ${b.cost - P.coins} Pongcoins · gana partidos para conseguirlas`); return; }
+      if (b.outfit) buyOutfit(b.outfit.id);
+      buyPieces(b.rest); tryOutfit = null;
+      onBuy(); lookChanged(); return;
+    }
     const of = e.target.closest('.outfit');
     if (of) {
       const o = OUTFITS.find(x => x.id === of.dataset.o);
       const keep = { name: look().name, number: look().number, height: look().height, width: look().width, paddleType: look().paddleType, paddleColor: look().paddleColor };
-      Object.assign(look(), DEFAULT_LOOK, { skin: look().skin }, o.look, keep); lookChanged(); blip();
+      Object.assign(look(), DEFAULT_LOOK, { skin: look().skin }, o.look, keep); tryOutfit = o.id; lookChanged(); blip();
       of.classList.add('pop'); setTimeout(() => of.classList.remove('pop'), 350);
     }
   });
@@ -172,7 +207,7 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
   numIn.addEventListener('change', () => { look().number = Math.max(0, Math.min(99, Math.round(+numIn.value) || 0)); numIn.value = look().number; lookChanged(); });
   $('randLook').addEventListener('click', () => {
     const keep = { name: look().name, number: look().number };
-    Object.assign(look(), randomLook(), keep); lookChanged(); blip();
+    Object.assign(look(), randomLook(), keep); stripLocked(); lookChanged(); blip();
   });
 
   function setStyle(v) { if (settings.control === v) return; settings.control = v; onChange(); refresh(); renderHelp(v); blip(); }
@@ -230,5 +265,5 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
   $('helpGrid').addEventListener('click', e => { const b = e.target.closest('.help-tabs button'); if (b) { renderHelp(b.dataset.m); blip(); } });
   refresh();
   select(0, false);
-  return { key, refresh, pane: () => NAV[sel], go: id => select(NAV.indexOf(id), false), charTab: id => { charTab = id; renderChar(); } };
+  return { key, refresh, renderChar, stripLocked, pane: () => NAV[sel], go: id => select(NAV.indexOf(id), false), charTab: id => { charTab = id; renderChar(); } };
 }

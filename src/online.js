@@ -19,7 +19,7 @@ export function createOnline(cb) {
     onStatus: (state, info) => {
       if (state === 'creating') status('Creando sala…', 'wait');
       if (state === 'joining') { setCode(info); status(`Conectando con la sala ${info}…`, 'wait'); }
-      if (state === 'waiting') { setCode(info); status(waitingText(), 'wait'); }
+      if (state === 'waiting') { setCode(info); status(waitingText(), 'wait'); announce(); }
     },
     onPeerOpen: id => {
       if (!S.isHost) { S.connected = true; net.send({ t: 'hello', look: cb.getLook() }); status('¡Conectado! Entrando en la sala…', 'wait'); }
@@ -90,7 +90,15 @@ export function createOnline(cb) {
     net.send({ t: 'roster', players: pub(), cfg: S.cfg });
     renderRoom(); cb.onRoster(pub());
     if (S.active) status(waitingText(), freeSlots().length ? 'wait' : 'ok');
+    announce();
   }
+  // sala pública: se anuncia en el directorio (nombre, modo, plazas, si está jugando)
+  function pubInfo() {
+    if (!S.active || !S.isHost || !S.cfg || !S.cfg.public || !S.code) return null;
+    const h = S.players.find(p => p.slot === 0);
+    return { code: S.code, name: h ? h.look.name : 'Sala', mode: S.cfg.mode, n: S.players.filter(p => !p.bot).length, max: need(), bestOf: S.cfg.bestOf, target: S.cfg.target, playing: S.inMatch };
+  }
+  function announce() { if (cb.onRoomInfo) cb.onRoomInfo(pubInfo()); }
   function startPing() {
     clearInterval(S.pingTimer);
     S.pingTimer = setInterval(() => net.send({ t: 'ping', ts: performance.now() }), 1500);
@@ -138,7 +146,7 @@ export function createOnline(cb) {
     box.innerHTML = `<div class="rteam a"><h5>Equipo A</h5>${slotCard(0)}${two ? slotCard(2) : ''}</div>
       <div class="vs-badge">VS</div>
       <div class="rteam b"><h5>Equipo B</h5>${slotCard(1)}${two ? slotCard(3) : ''}</div>`;
-    $('roomMode').textContent = `${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target}`;
+    $('roomMode').textContent = `${S.cfg.public ? 'Pública' : 'Privada'} · ${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target}`;
   }
   function reset() {
     clearInterval(S.pingTimer);
@@ -169,13 +177,14 @@ export function createOnline(cb) {
     net.leave(); reset();
     S.active = false; S.isHost = false; S.code = ''; S.players = []; S.cfg = null;
     showRoom(false); status('', '');
+    if (cb.onRoomInfo) cb.onRoomInfo(null);
     cb.onLeft();
   }
   function start() {
     if (!S.isHost || S.players.length < 2) return;
     const slots = S.cfg.mode === '2v2' ? [0, 1, 2, 3] : [0, 1];
     for (const s of slots) if (!S.players.some(p => p.slot === s)) S.players.push({ slot: s, look: cb.botLook(s), bot: true, peer: null });
-    S.inMatch = true;
+    S.inMatch = true; announce();
     const msg = { t: 'start', cfg: S.cfg, players: pub(), firstServer: Math.random() < 0.5 ? 0 : 1 };
     net.send(msg);
     cb.onStart(msg);

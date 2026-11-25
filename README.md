@@ -11,11 +11,26 @@ Ping pong arcade 3D con estilo cartoon, física de efecto real, frijolitos perso
 - **Contra la CPU**: 1 contra 1 o 2 contra 2 (con compañero CPU), al mejor de 1/3/5 juegos, a 5/7/11/21 puntos (prelobby).
 - **Online**: 1 contra 1 o 2 contra 2 con hasta 4 jugadores; los huecos libres los ocupa la CPU.
 
+### Perfil y progreso
+- La primera vez el juego pide tu **nombre** y lo guarda (perfil con partidos, victorias y nivel).
+- **Pongcoins**: solo las gana quien gana el partido (Normal a 11 = 5; más difícil o más largo, algo más).
+  Todo cuesta **5**, lo que da un partido normal ganado. Al empezar regalamos 10.
+- **Vestidor**: la mayoría de prendas y outfits están bloqueados. Puedes probártelos y comprarlos ahí mismo;
+  comprar un outfit desbloquea todas sus prendas.
+- **Taller**: árbol de habilidades del frijolito (Agilidad, Fuerza, Reflejos, Alcance) y **3 palas**
+  personalizables (nombre, tipo, color y mejoras de Velocidad, Efecto, Control y Remate). 5 niveles por rama.
+- Todo se guarda en el navegador (localStorage).
+
 ### Multijugador online
 *Menú → Online*:
-1. Uno pulsa **Crear sala** → recibe un código de 5 letras (o copia el enlace de invitación).
-2. El otro pulsa **Unirse**, escribe el código (o abre el enlace) → se conectan.
+1. Uno pulsa **Crear sala**, elige **Privada** o **Pública** → recibe un código de 5 letras (o copia el enlace).
+2. El otro pulsa **Unirse** y escribe el código, abre el enlace o elige la sala en **Salas públicas**.
 3. El anfitrión pulsa **Empezar partido**. Al terminar, *Revancha* cuando ambos la pidan.
+
+**Salas públicas sin servidor:** el primer navegador que abre *Online* reclama un ID fijo de PeerJS y hace de
+tablón (directorio). Los anfitriones de salas públicas se registran en él y quien busca partida recibe la lista.
+Si ese navegador se cierra, otro reclama el ID en unos segundos y las salas se vuelven a anunciar solas
+(latido cada 4 s). Limitación: solo aparecen salas mientras su anfitrión tiene el juego abierto.
 
 Funciona entre navegadores, sin servidores propios ni coste:
 - **WebRTC P2P** (PeerJS): los datos van directos de un jugador al otro.
@@ -35,7 +50,7 @@ Dos estilos de juego (*Menú → Estilo de juego*):
 | Soltar cuando el anillo se cierre | Clic izq./der. (o Q/E): girar la pala ← / → (dirección + curva extra) |
 | Sacudir el ratón al soltar: curva | Anillo guía: verde = pala centrada con la bola |
 
-Comunes: 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
+Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
 
 ## Motor y arquitectura
 - **Three.js r169** (local en `vendor/`), WebGL, sombras PCF, materiales toon + contorno *inverted hull*.
@@ -54,7 +69,10 @@ src/arena.js        estadio: gradas laterales con afición instanciada por equip
 src/referee.js      juez de silla con gestos y gags (señala, censura, se cae, se duerme)
 src/fx.js           estela, sombra, anillos, estrellas, confeti, retícula
 src/audio.js        sonido sintetizado (WebAudio)
-src/ui.js           menú principal, selectores, vestidor, ayuda, panel de controles
+src/ui.js           menú principal, selectores, vestidor (con tienda), ayuda, panel de controles
+src/progress.js     perfil, Pongcoins, desbloqueos, habilidades y las 3 palas (localStorage)
+src/workshop.js     Taller: árboles de habilidades del frijolito y de cada pala
+src/lobby.js        salas públicas: tablón P2P que se traspasa entre navegadores
 src/net.js          conexión P2P (PeerJS / WebRTC)
 src/online.js       sala online: crear/unirse, código, enlace, saludo, ping
 src/main.js         render, cámara, entrada, HUD, bucle

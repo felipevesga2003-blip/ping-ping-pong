@@ -113,6 +113,9 @@ export const SFX = {
   fall() { if (!on()) return; tone(420, 0.35, 'triangle', 0.1, 90); noise(0.18, 0.3, 300, { delay: 0.3 }); tone(80, 0.25, 'sine', 0.25, 40, 0.3); },
   boo() { if (!on()) return; noise(1.1, 0.15, 400, { attack: 0.2, q: 0.6 }); tone(180, 0.9, 'sawtooth', 0.025, 140); },
   blip() { tone(880, 0.035, 'triangle', 0.07, 1100); },
+  // tienda: moneda al comprar / ganar y "no llega" al faltar Pongcoins
+  coin() { tone(1320, 0.07, 'square', 0.05); tone(1980, 0.22, 'square', 0.05, 0, 0.07); },
+  deny() { tone(220, 0.09, 'square', 0.05); tone(180, 0.14, 'square', 0.05, 0, 0.1); },
   select() { tone(520, 0.08, 'triangle', 0.1, 780); tone(1040, 0.12, 'triangle', 0.07, 0, 0.06); },
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.28, 'square', 0.08, 0, i * 0.12)); },
   lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.3, 'triangle', 0.1, 0, i * 0.15)); },

@@ -3,14 +3,14 @@
 //  El anfitrión acepta varias conexiones (2v2) y reenvía mensajes;
 //  cada invitado solo habla con el anfitrión.
 // =============================================================
-const PREFIX = 'pingpingpong-v1-';
+export const PREFIX = 'pingpingpong-v1-';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // sin 0/O/1/I para dictarlo sin errores
 
 export const makeCode = () => Array.from({ length: 5 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
 export const cleanCode = s => (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
 
 let peerLib = null;
-function loadPeer() {
+export function loadPeer() {
   if (window.Peer) return Promise.resolve(window.Peer);
   if (peerLib) return peerLib;
   peerLib = new Promise((res, rej) => {

@@ -96,6 +96,17 @@
     <symbol id="i-book" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.3 1-1.3 1.9v.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.5" fill="currentColor"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffc93c" stroke="#1a1238" stroke-width="2.4"/><circle cx="12" cy="12" r="6.4" fill="none" stroke="#e09a00" stroke-width="1.8"/><path d="M10.6 8.6h2.2a1.9 1.9 0 0 1 0 3.8h-2.2v3.2M10.6 8.6v3.8" fill="none" stroke="#1a1238" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="11" rx="2.6" fill="currentColor"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2 4.5 13.5h6L9.5 22l10-12.5h-6.2z" fill="currentColor"/></symbol>
+    <symbol id="i-fist" viewBox="0 0 24 24"><path d="M6 9.5c0-1.4 1-2.4 2.3-2.4.6 0 1.1.2 1.5.5.3-.9 1.1-1.5 2.1-1.5.8 0 1.5.4 1.9 1 .4-.4 1-.7 1.6-.7 1.3 0 2.3 1 2.3 2.3v5.3c0 3.6-2.8 6.5-6.3 6.5h-.7C8.2 20.5 6 18 6 15z" fill="currentColor"/><path d="M9.8 7.6v4M13.7 7.1v4.4" stroke="#1a1238" stroke-width="1.6" stroke-linecap="round" opacity=".45"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="#1a1238"/><circle cx="13.3" cy="10.7" r="1.1" fill="#fff"/></symbol>
+    <symbol id="i-reach" viewBox="0 0 24 24"><path d="M2.5 12h19M6.5 7.5 2.5 12l4 4.5M17.5 7.5l4 4.5-4 4.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-swirl" viewBox="0 0 24 24"><path d="M12 12.2a1.6 1.6 0 1 1 1.6-1.6 4 4 0 0 1-4 4A5.2 5.2 0 0 1 4.4 9.4 7 7 0 0 1 11.4 2.4a8.6 8.6 0 0 1 8.6 8.6 10 10 0 0 1-10 10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></symbol>
+    <symbol id="i-hammer" viewBox="0 0 24 24"><rect x="3" y="4" width="13" height="7" rx="1.8" fill="currentColor" transform="rotate(-30 9.5 7.5)"/><path d="M12 11.5 18.5 21" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 20V9M12 13 6.5 8.5M12 11l5.5-4.5"/></g><circle cx="12" cy="6" r="2.8" fill="currentColor"/><circle cx="5.5" cy="7.6" r="2.4" fill="currentColor"/><circle cx="18.5" cy="5.6" r="2.4" fill="currentColor"/><circle cx="12" cy="20" r="2.2" fill="currentColor"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.4" fill="currentColor"/><path d="M3.5 21c.6-4.4 4-7 8.5-7s7.9 2.6 8.5 7z" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -107,6 +118,8 @@
   <header class="menu-top">
     <div class="season"><span class="dot"></span>Temporada 1 · Torneo del Parque</div>
     <div class="top-right">
+      <button class="chip-btn profile-chip" id="profileBtn" title="Tu perfil"><svg><use href="#i-user"/></svg><span id="profileName">Tú</span></button>
+      <button class="chip-btn coin-chip" id="coinChip" title="Pongcoins: gana partidos para conseguir más"><svg><use href="#i-coin"/></svg><b id="coinCount">0</b></button>
       <button class="chip-btn" id="settingsBtn"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
       <button class="chip-btn" id="muteBtn"><svg><use href="#i-sound"/></svg><span id="muteLbl">Sonido</span></button>
       <span class="build">v1.0</span>
@@ -140,20 +153,25 @@
         <span class="nav-txt"><span class="lbl">Personaje</span><span class="sub" id="navChar">Tú · Camiseta</span></span>
         <span class="idx">03</span>
       </button>
+      <button class="nav-item" data-id="shop">
+        <span class="nav-ico"><svg><use href="#i-tree"/></svg></span>
+        <span class="nav-txt"><span class="lbl">Taller</span><span class="sub" id="navShop">Habilidades y palas</span></span>
+        <span class="idx">04</span>
+      </button>
       <button class="nav-item" data-id="style">
         <span class="nav-ico"><svg><use href="#i-paddle"/></svg></span>
         <span class="nav-txt"><span class="lbl">Estilo de juego</span><span class="sub" id="navStyle">Clásico</span></span>
-        <span class="idx">04</span>
+        <span class="idx">05</span>
       </button>
       <button class="nav-item" data-id="rules">
         <span class="nav-ico"><svg><use href="#i-sliders"/></svg></span>
         <span class="nav-txt"><span class="lbl">Partido</span><span class="sub" id="navRules">Normal · a 11</span></span>
-        <span class="idx">05</span>
+        <span class="idx">06</span>
       </button>
       <button class="nav-item" data-id="help">
         <span class="nav-ico"><svg><use href="#i-book"/></svg></span>
         <span class="nav-txt"><span class="lbl">Cómo jugar</span><span class="sub">Controles y técnicas</span></span>
-        <span class="idx">06</span>
+        <span class="idx">07</span>
       </button>
     </nav>
   </div>
@@ -202,6 +220,10 @@
               <p>Escribe el código de 5 letras que te pasaron.</p>
               <div class="join-row"><input id="joinCode" maxlength="5" placeholder="CÓDIGO" spellcheck="false" autocomplete="off"><button class="join-btn" id="joinBtn">Entrar</button></div>
             </div>
+            <div class="pub-rooms">
+              <div class="pub-head"><b>Salas públicas</b><span id="pubState" class="pub-state">Buscando…</span></div>
+              <div class="pub-list" id="pubList"></div>
+            </div>
           </div>
           <div class="on-room hidden" id="onRoom">
             <div class="room-code" id="roomCodeBox">
@@ -231,6 +253,17 @@
           </div>
           <div class="char-tabs" id="charTabs"></div>
           <div class="char-content" id="charContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TALLER -->
+    <div class="pane" data-pane="shop">
+      <div class="card">
+        <div class="card-head"><span class="kicker">Taller</span><h3>Mejoras</h3><span class="coin-pill"><svg><use href="#i-coin"/></svg><b id="wsCoins">0</b></span></div>
+        <div class="char-body">
+          <div class="char-tabs" id="wsTabs"></div>
+          <div class="char-content ws-content" id="wsContent"></div>
         </div>
       </div>
     </div>
@@ -356,6 +389,7 @@
     <div class="sheet-score"><span class="p1" id="pS0">0</span><i>–</i><span class="p2" id="pS1">0</span></div>
     <div class="btn-stack">
       <button class="mbtn primary" id="resumeBtn"><span>Continuar</span><kbd>Esc</kbd></button>
+      <button class="mbtn" id="pauseStyle"><span id="pauseStyleTxt">Cambiar a Mano libre</span><kbd>Tab</kbd></button>
       <button class="mbtn" id="restartBtn"><span>Reiniciar partido</span></button>
       <button class="mbtn" id="pauseSettings"><span>Ajustes</span></button>
       <p class="sheet-text small hidden" id="pauseOnline">Partido online: el juego sigue en marcha mientras estás en este menú.</p>
@@ -371,6 +405,7 @@
     <h2 class="sheet-title" id="overTitle">Victoria</h2>
     <div class="sheet-score big"><span class="p1" id="oS0">11</span><i>–</i><span class="p2" id="oS1">7</span></div>
     <div id="overStats" class="stats"></div>
+    <div id="overReward" class="reward hidden"></div>
     <div class="btn-stack row">
       <button class="mbtn primary" id="againBtn"><span>Revancha</span><kbd>Enter</kbd></button>
       <button class="mbtn" id="menuBtn"><span>Menú principal</span></button>
@@ -394,8 +429,10 @@
         <div class="seg2" data-k="target"><button data-v="5">5</button><button data-v="7">7</button><button data-v="11">11</button><button data-v="21">21</button></div></div>
       <div class="set-row"><div class="set-lbl"><b>Movimiento</b><span>Automático: tu frijolito corre solo a la bola</span></div>
         <div class="seg2" data-k="assist"><button data-v="1">Automático</button><button data-v="0">Manual</button></div></div>
-      <div class="set-row"><div class="set-lbl"><b>Tu raqueta</b><span id="plPaddleDesc">Equilibrada</span></div>
-        <div class="seg2"><button id="plPaddle">Cambiar</button></div></div>
+      <div class="set-row" id="plVisRow"><div class="set-lbl"><b>Visibilidad</b><span>Pública: sale en la lista y cualquiera puede unirse</span></div>
+        <div class="seg2" data-k="visibility"><button data-v="private">Privada</button><button data-v="public">Pública</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Tu pala</b><span id="plPaddleDesc">Equilibrada</span></div>
+        <div class="seg2" id="plPads"></div></div>
     </div>
     <div class="btn-stack row"><button class="mbtn primary" id="plGo"><span id="plGoTxt">¡A jugar!</span><kbd>Enter</kbd></button><button class="mbtn" id="plBack"><span>Volver</span><kbd>Esc</kbd></button></div>
   </div>
@@ -423,6 +460,19 @@
     <div class="btn-stack row"><button class="mbtn primary" id="settingsClose"><span>Listo</span><kbd>Esc</kbd></button></div>
   </div>
 </div>
+
+<!-- ================= PERFIL ================= -->
+<div id="profile" class="screen dim hidden">
+  <div class="sheet wide">
+    <div class="sheet-kicker" id="pfKicker">Bienvenido al Torneo del Parque</div>
+    <h2 class="sheet-title small" id="pfTitle">¿Cómo te llamas?</h2>
+    <p class="sheet-text" id="pfText">Tu nombre aparecerá en el marcador, en las salas online y en tu frijolito. Lo guardamos para las próximas veces.</p>
+    <input id="pfName" class="pf-input" maxlength="10" spellcheck="false" autocomplete="off" placeholder="Tu nombre">
+    <div id="pfStats" class="stats hidden"></div>
+    <div class="btn-stack row"><button class="mbtn primary" id="pfGo"><span>¡A jugar!</span><kbd>Enter</kbd></button><button class="mbtn hidden" id="pfClose"><span>Cerrar</span><kbd>Esc</kbd></button></div>
+  </div>
+</div>
+<div id="toast"></div>
 
 <div id="err" class="hidden"></div>
 <div id="fileWarn" class="screen dim hidden">
