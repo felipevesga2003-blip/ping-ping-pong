@@ -108,6 +108,10 @@ export const SFX = {
       cry: [[520, 0], [440, 0.18], [370, 0.36]], love: [[880, 0], [1320, 0.14]], angry: [[160, 0], [150, 0.1], [140, 0.2]] }[id] || [[600, 0]];
     for (const [f, d] of S) tone(f, 0.14, id === 'angry' || id === 'taunt' ? 'sawtooth' : 'triangle', 0.06, 0, d);
   },
+  // juez: silbato, porrazo al caerse y abucheo del público
+  whistle() { if (!on()) return; for (const d of [0, 0.16]) { tone(2650, 0.13, 'square', 0.035, 2500, d); noise(0.13, 0.05, 3000, { delay: d }); } },
+  fall() { if (!on()) return; tone(420, 0.35, 'triangle', 0.1, 90); noise(0.18, 0.3, 300, { delay: 0.3 }); tone(80, 0.25, 'sine', 0.25, 40, 0.3); },
+  boo() { if (!on()) return; noise(1.1, 0.15, 400, { attack: 0.2, q: 0.6 }); tone(180, 0.9, 'sawtooth', 0.025, 140); },
   blip() { tone(880, 0.035, 'triangle', 0.07, 1100); },
   select() { tone(520, 0.08, 'triangle', 0.1, 780); tone(1040, 0.12, 'triangle', 0.07, 0, 0.06); },
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.28, 'square', 0.08, 0, i * 0.12)); },

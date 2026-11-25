@@ -1,8 +1,10 @@
 // =============================================================
 //  Interfaz: menú principal, selectores, ayuda, panel de controles
 // =============================================================
-import { DIFFS } from './config.js';
-import { SKINS, SHIRT_COLORS, HEIGHTS, WIDTHS, SHIRTS, HATS, GLASSES, CPU_LOOKS, randomLook, cpuLookFor } from './character.js';
+import { DIFFS, PADDLES } from './config.js';
+import { SKINS, SHIRT_COLORS, PANTS_COLORS, PADDLE_COLORS, HEIGHTS, WIDTHS, EYES, EARS, SHIRTS, PANTS, HATS, GLASSES, FACES, NECKS, BACKS, OUTFITS, DEFAULT_LOOK, CPU_LOOKS, randomLook, cpuLookFor } from './character.js';
+const HAIR_COLORS = ['#3a2416', '#5b3a29', '#2b2420', '#e07a2b', '#e8b931', '#f2eee6', '#ff5fb2', '#3b9bff'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const $ = id => document.getElementById(id);
 
@@ -104,7 +106,7 @@ function renderHelp(mode = helpMode) {
 
 // El orden sale del propio HTML (así añadir una sección nunca desincroniza menú y paneles)
 const NAV = [...document.querySelectorAll('.nav-item')].map(el => el.dataset.id);
-const LOOK_OPTS = { height: HEIGHTS, width: WIDTHS, shirt: SHIRTS, hat: HATS, glasses: GLASSES };
+const LOOK_OPTS = { height: HEIGHTS, width: WIDTHS, eyes: EYES, ears: EARS, shirt: SHIRTS, pants: PANTS, hat: HATS, glasses: GLASSES, face: FACES, neck: NECKS, back: BACKS };
 
 export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane }) {
   let sel = 0;
@@ -124,23 +126,47 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     settings[k] = o.values[(idx + d + o.values.length) % o.values.length];
     onChange(); refresh(k); blip();
   }
-  // ---- Personaje ----
+  // ---- Personaje (vestidor por pestañas, generado desde el catálogo) ----
   const look = () => settings.look;
+  let charTab = 'body';
   function flipVal(el) { if (!el) return; el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip'); }
-  function lookChanged(k) { onLook(); refresh(); if (k) flipVal(document.querySelector(`.csel[data-k="${k}"] .v`)); }
+  function lookChanged(k) { onLook(); refresh(); renderChar(); if (k) flipVal(document.querySelector(`.csel[data-k="${k}"] .v`)); }
   function cycleLook(k, d) {
-    const opts = LOOK_OPTS[k], i = opts.findIndex(o => String(o[0]) === String(look()[k]));
+    const opts = LOOK_OPTS[k], i = Math.max(0, opts.findIndex(o => String(o[0]) === String(look()[k])));
     look()[k] = opts[(i + d + opts.length) % opts.length][0];
     lookChanged(k); blip();
   }
-  document.querySelectorAll('.csel[data-k]').forEach(s => s.addEventListener('click', e => {
-    const b = e.target.closest('.arr'); if (b) cycleLook(s.dataset.k, +b.dataset.d);
-  }));
-  for (const [k, list] of [['skin', SKINS], ['shirtColor', SHIRT_COLORS]]) {
-    const box = document.querySelector(`.swatches[data-k="${k}"]`);
-    box.innerHTML = list.map(c => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('');
-    box.addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; look()[k] = b.dataset.c; lookChanged(); blip(); });
+  const sel3 = (k, label) => `<div class="csel" data-k="${k}"><span>${label}</span><div><button class="arr" data-d="-1">‹</button><b class="v">${esc((LOOK_OPTS[k].find(o => String(o[0]) === String(look()[k])) || LOOK_OPTS[k][0])[1])}</b><button class="arr" data-d="1">›</button></div></div>`;
+  const swRow = (k, label, list, extra = '') => `<div class="swatch-row"><span>${label}</span><div class="swatches" data-k="${k}">${extra}${list.map(c => `<button class="sw${look()[k] === c ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>`;
+  const autoSw = (k, txt) => `<button class="sw auto${look()[k] ? '' : ' on'}" data-c="" title="${txt}">${txt}</button>`;
+  const TABS = {
+    body: { name: 'Cuerpo', html: () => swRow('skin', 'Piel', SKINS) + `<div class="cgrid">${sel3('height', 'Altura')}${sel3('width', 'Complexión')}${sel3('eyes', 'Ojos')}${sel3('ears', 'Orejas')}</div>` },
+    clothes: { name: 'Ropa', html: () => `<div class="cgrid">${sel3('shirt', 'Parte de arriba')}${sel3('pants', 'Pantalón')}</div>` + swRow('shirtColor', 'Equipación', SHIRT_COLORS) + swRow('pantsColor', 'Pantalón', PANTS_COLORS) + swRow('accent', 'Secundario', SHIRT_COLORS) },
+    acc: { name: 'Accesorios', html: () => `<div class="cgrid">${sel3('hat', 'Sombrero')}${sel3('glasses', 'Gafas')}${sel3('face', 'Cara')}${sel3('neck', 'Cuello')}${sel3('back', 'Espalda')}</div>` + swRow('hatColor', 'Sombrero', SHIRT_COLORS, autoSw('hatColor', 'Auto')) + swRow('hairColor', 'Pelo', HAIR_COLORS) + swRow('gloves', 'Guantes', ['#ffffff', '#1c1c24', '#e0352b', '#ffc93c'], autoSw('gloves', 'Sin')) },
+    paddle: { name: 'Raqueta', html: () => `<div class="pad-grid">${Object.entries(PADDLES).map(([id, p]) => `<button class="pad-card${(look().paddleType || 'balanced') === id ? ' on' : ''}" data-p="${id}"><b>${p.name}</b><span>${p.desc}</span>${['speed', 'spin', 'ctrl', 'smash'].map(s => `<i class="stat"><em>${STAT_NAMES[s]}</em><u style="width:${Math.round(((p[s] - 0.8) / 0.6) * 100)}%"></u></i>`).join('')}</button>`).join('')}</div>` + swRow('paddleColor', 'Goma', PADDLE_COLORS) },
+    outfits: { name: 'Outfits', html: () => `<div class="outfit-grid">${OUTFITS.map(o => `<button class="outfit" data-o="${o.id}"><svg class="bean" style="color:${o.look.skin || look().skin}"><use href="#i-bean"/></svg><i class="o-shirt" style="background:${o.look.shirt === 'none' ? (o.look.pantsColor || '#2c3a66') : o.look.shirt === 'overalls' ? o.look.shirtColor : o.look.shirtColor || '#fff'}"></i><b>${o.name}</b></button>`).join('')}</div><p class="outfit-note">Un clic viste a tu frijolito completo. Después puedes retocar cualquier prenda.</p>` },
+  };
+  const STAT_NAMES = { speed: 'Velocidad', spin: 'Efecto', ctrl: 'Control', smash: 'Remate' };
+  function renderChar() {
+    $('charTabs').innerHTML = Object.entries(TABS).map(([id, t]) => `<button data-t="${id}" class="${id === charTab ? 'on' : ''}">${t.name}</button>`).join('');
+    $('charContent').innerHTML = TABS[charTab].html();
   }
+  $('charTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; charTab = b.dataset.t; renderChar(); blip(); });
+  $('charContent').addEventListener('click', e => {
+    const arr = e.target.closest('.arr'), csel = e.target.closest('.csel[data-k]');
+    if (arr && csel) return cycleLook(csel.dataset.k, +arr.dataset.d);
+    const sw = e.target.closest('.sw'), box = e.target.closest('.swatches');
+    if (sw && box) { look()[box.dataset.k] = sw.dataset.c || null; lookChanged(); blip(); return; }
+    const pc = e.target.closest('.pad-card');
+    if (pc) { look().paddleType = pc.dataset.p; lookChanged(); blip(); return; }
+    const of = e.target.closest('.outfit');
+    if (of) {
+      const o = OUTFITS.find(x => x.id === of.dataset.o);
+      const keep = { name: look().name, number: look().number, height: look().height, width: look().width, paddleType: look().paddleType, paddleColor: look().paddleColor };
+      Object.assign(look(), DEFAULT_LOOK, { skin: look().skin }, o.look, keep); lookChanged(); blip();
+      of.classList.add('pop'); setTimeout(() => of.classList.remove('pop'), 350);
+    }
+  });
   const nameIn = $('lookName'), numIn = $('lookNum');
   nameIn.addEventListener('input', () => { look().name = nameIn.value.trim() || 'Tú'; onLook(true); refresh(); });
   numIn.addEventListener('change', () => { look().number = Math.max(0, Math.min(99, Math.round(+numIn.value) || 0)); numIn.value = look().number; lookChanged(); });
@@ -181,11 +207,6 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
     $('factMove').textContent = +settings.assist ? 'Automático' : 'Manual';
     // personaje
     const L = settings.look;
-    for (const k of Object.keys(LOOK_OPTS)) {
-      const o = LOOK_OPTS[k].find(o => String(o[0]) === String(L[k])) || LOOK_OPTS[k][0];
-      document.querySelector(`.csel[data-k="${k}"] .v`).textContent = o[1];
-    }
-    document.querySelectorAll('.swatches').forEach(b => b.querySelectorAll('.sw').forEach(s => s.classList.toggle('on', s.dataset.c === L[b.dataset.k])));
     if (document.activeElement !== $('lookName')) $('lookName').value = L.name;
     $('lookNum').value = L.number;
     $('navChar').textContent = `${L.name} · ${(SHIRTS.find(s => s[0] === L.shirt) || SHIRTS[0])[1]}`;
@@ -205,8 +226,9 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane })
   }
 
   renderHelp(settings.control);
+  renderChar();
   $('helpGrid').addEventListener('click', e => { const b = e.target.closest('.help-tabs button'); if (b) { renderHelp(b.dataset.m); blip(); } });
   refresh();
   select(0, false);
-  return { key, refresh, pane: () => NAV[sel], go: id => select(NAV.indexOf(id), false) };
+  return { key, refresh, pane: () => NAV[sel], go: id => select(NAV.indexOf(id), false), charTab: id => { charTab = id; renderChar(); } };
 }

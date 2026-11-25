@@ -10,6 +10,7 @@ import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDi
 import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot, doEmote } from './game.js';
 import { createOnline } from './online.js';
 import { createArena } from './arena.js';
+import { createReferee } from './referee.js';
 import { createFX } from './fx.js';
 import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume } from './audio.js';
 import { createMenu, renderControls, CONTROLS } from './ui.js';
@@ -44,6 +45,10 @@ const arena = createArena(scene);
 scene.add(createTable());
 const views = [null, null];   // se crean al cargar los ajustes (aspecto personalizado)
 const ballView = createBall(); scene.add(ballView);
+const referee = createReferee(scene, {
+  onBubble: (text, pos) => { if (screen !== 'menu') pop3D(text, pos, 'ref'); },
+  onSound: s => { if (screen !== 'menu' && SFX[s]) SFX[s](); },
+});
 const fx = createFX(scene);
 
 const overlay = $('overlay'), octx = overlay.getContext('2d');
@@ -470,6 +475,7 @@ onEvent((type, d) => {
       netSend({ t: 'hit', b: ballSnapshot(), kind: G.ball.kind, rally: G.rally,
         meta: { type: d.type, smash: d.smash, power: d.power, q: d.q, grade: d.grade, serve: d.serve, side: d.side, bh: G.chars[d.c].backhand } }, d.c);
     }
+    referee.onRally(G.rally);
     if (!G.demo && d.c === 0) tutorialHits++;
     if (!G.demo && d.team === 1 && tutorialHits < 3) hint(free() ? 'Lleva la pala al <b>anillo</b>: se pone verde cuando estás bien colocado'
       : '<b>Ahora:</b> haz clic cuando el anillo amarillo se cierre sobre la bola');
@@ -502,6 +508,7 @@ onEvent((type, d) => {
     return;
   }
   if (type === 'point') {
+    referee.onPoint(d.winner, G.rally);
     if (G.online && d.auth) netSend({ t: 'pt', w: d.winner, reason: d.reason, score: d.score, games: d.games });
     refreshHUD(); bump('s' + d.winner);
     const w = G.chars[d.winner === 0 ? 0 : 1];
@@ -765,6 +772,7 @@ function drawOverlay() {
 }
 
 // ---------- Bucle ----------
+const fadeO = [1, 1, 1, 1];
 const spinQ = new THREE.Quaternion(), spinAxis = new THREE.Vector3();
 let last = performance.now();
 function frame(now) {
@@ -824,8 +832,22 @@ function frame(now) {
     if (lb && lb.z > 0) { fx.land.position.set(lb.x, C.TABLE_H + 0.003, lb.z); landOn = true; }
   }
   fx.land.visible = landOn;
+  // Semitransparencia: tu frijolito (y tu compañero) se vuelven translúcidos si la bola pasa cerca o detrás
+  for (const i of [0, 2]) {
+    const v = views[i], c = G.chars[i];
+    if (!v || !c || screen === 'menu') { if (v) v.setOpacity(1); continue; }
+    let o = 1;
+    if (b.live && G.phase !== 'serve') {
+      const d3 = Math.hypot(b.x - c.x, b.y - 0.8, b.z - c.z);
+      const behind = (b.z - c.z) * c.sign < 0.2 && Math.abs(b.x - c.x) < 0.75 && b.z * c.sign > 0;
+      if (d3 < 1.25 || behind) o = 0.32;
+    }
+    fadeO[i] += (o - fadeO[i]) * Math.min(1, dt * 10);
+    v.setOpacity(Math.round(fadeO[i] * 20) / 20);
+  }
   fx.update(dt, camera, time);
   arena.update(time, dt, ballPos);
+  referee.update(gdt || (screen === 'menu' ? dt : 0), time, ballPos);
 
   // Online: mi estado al rival 20 veces por segundo + indicador de ping
   if (G.online && screen !== 'menu') {
@@ -856,8 +878,21 @@ roster = demoRoster(); buildViews();
 newMatch(true);
 updateCamera(1);
 requestAnimationFrame(frame);
+// Fin de la pantalla de carga: tras el primer frame, con las fuentes listas y un mínimo para lucir la animación
+(async () => {
+  try { await document.fonts.ready; } catch (e) { /* sin API de fuentes */ }
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  clearInterval(window.__pppProg);
+  const fill = document.getElementById('ldFill'); if (fill) fill.style.width = '100%';
+  const wait = Math.max(400, 2200 - (Date.now() - (window.__pppT0 || 0)));
+  setTimeout(() => {
+    const ld = document.getElementById('loader'); if (!ld) return;
+    ld.classList.add('done'); clearInterval(window.__pppTips);
+    setTimeout(() => ld.remove(), 800);
+  }, wait);
+})();
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
-window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online };
+window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee };
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');
 if (salaParam) { menu.go('online'); online.join(salaParam); }

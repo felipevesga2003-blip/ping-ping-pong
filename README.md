@@ -7,6 +7,10 @@ Ping pong arcade 3D con estilo cartoon, física de efecto real, frijolitos perso
 - **En local:** doble clic en **`Jugar.bat`** (servidor Node.js en `http://localhost:5173`).
   No se puede abrir `index.html` directamente: los módulos ES necesitan http.
 
+### Modos
+- **Contra la CPU**: 1 contra 1 o 2 contra 2 (con compañero CPU), al mejor de 1/3/5 juegos, a 5/7/11/21 puntos (prelobby).
+- **Online**: 1 contra 1 o 2 contra 2 con hasta 4 jugadores; los huecos libres los ocupa la CPU.
+
 ### Multijugador online
 *Menú → Online*:
 1. Uno pulsa **Crear sala** → recibe un código de 5 letras (o copia el enlace de invitación).
@@ -31,7 +35,7 @@ Dos estilos de juego (*Menú → Estilo de juego*):
 | Soltar cuando el anillo se cierre | Clic izq./der. (o Q/E): girar la pala ← / → (dirección + curva extra) |
 | Sacudir el ratón al soltar: curva | Anillo guía: verde = pala centrada con la bola |
 
-Comunes: bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
+Comunes: 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
 
 ## Motor y arquitectura
 - **Three.js r169** (local en `vendor/`), WebGL, sombras PCF, materiales toon + contorno *inverted hull*.
@@ -47,6 +51,7 @@ src/game.js         reglas, golpeo, saque, IA, sincronización online (sin rende
 src/models.js       materiales toon, piezas con contorno, mesa, bola, cielo
 src/character.js    frijolitos procedurales personalizables + rivales CPU + color rival
 src/arena.js        estadio: gradas laterales con afición instanciada por equipo
+src/referee.js      juez de silla con gestos y gags (señala, censura, se cae, se duerme)
 src/fx.js           estela, sombra, anillos, estrellas, confeti, retícula
 src/audio.js        sonido sintetizado (WebAudio)
 src/ui.js           menú principal, selectores, vestidor, ayuda, panel de controles

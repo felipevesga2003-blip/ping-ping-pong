@@ -39,6 +39,34 @@
 </script>
 </head>
 <body>
+<!-- ================= PANTALLA DE CARGA ================= -->
+<div id="loader">
+  <div class="ld-stripes"></div>
+  <div class="ld-stage">
+    <div class="ld-logo"><span class="l1">PING PING</span><span class="l2">PONG!</span></div>
+    <div class="ld-rally">
+      <svg class="ld-pad l" viewBox="0 0 60 90"><rect x="25" y="52" width="10" height="34" rx="4" fill="#d9a066" stroke="#1a1238" stroke-width="4"/><circle cx="30" cy="30" r="26" fill="#ff5a6e" stroke="#1a1238" stroke-width="5"/></svg>
+      <i class="ld-ballx"><i class="ld-ball"></i></i>
+      <svg class="ld-pad r" viewBox="0 0 60 90"><rect x="25" y="52" width="10" height="34" rx="4" fill="#d9a066" stroke="#1a1238" stroke-width="4"/><circle cx="30" cy="30" r="26" fill="#4da8ff" stroke="#1a1238" stroke-width="5"/></svg>
+      <i class="ld-table"></i>
+    </div>
+    <div class="ld-bar"><i id="ldFill"></i></div>
+    <div class="ld-tip"><b>Consejo</b><span id="ldTip">Calentando la mesa…</span></div>
+  </div>
+  <div class="ld-beans"><i style="--c:#4da8ff"></i><i style="--c:#ff6b8b"></i><i style="--c:#ffc93c"></i><i style="--c:#3ee0b0"></i><i style="--c:#b39cff"></i></div>
+</div>
+<script>
+  (function () {
+    var tips = ['Mueve la pala al golpear para darle efecto a la bola', 'Una bola alta es un smash en bandeja', 'Pulsa 1–6 en partido para hacer emotes', 'El juez no es tan imparcial como parece…',
+      'En 2 contra 2 los compañeros se turnan para golpear', 'La raqueta Remolino curva muchísimo la bola', 'Con la rueda del ratón llegas a la primera persona',
+      'Viste a tu frijolito con los outfits del vestidor', 'El cortado flota y bota bajito: ideal para defender'];
+    var i = Math.floor(Math.random() * tips.length), el = document.getElementById('ldTip'), fill = document.getElementById('ldFill'), p = 0;
+    el.textContent = tips[i];
+    window.__pppTips = setInterval(function () { i = (i + 1) % tips.length; el.style.opacity = 0; setTimeout(function () { el.textContent = tips[i]; el.style.opacity = 1; }, 250); }, 2400);
+    window.__pppProg = setInterval(function () { p = Math.min(78, p + (78 - p) * 0.06 + 0.4); fill.style.width = p + '%'; }, 60);
+    window.__pppT0 = Date.now();
+  })();
+</script>
 <div id="app"></div>
 <canvas id="overlay"></canvas>
 
@@ -202,16 +230,8 @@
             <label class="field grow"><span>Nombre</span><input id="lookName" maxlength="10" spellcheck="false" autocomplete="off"></label>
             <label class="field num"><span>Dorsal</span><input id="lookNum" type="number" min="0" max="99"></label>
           </div>
-          <div class="swatch-row"><span>Piel</span><div class="swatches" data-k="skin"></div></div>
-          <div class="swatch-row"><span>Equipación</span><div class="swatches" data-k="shirtColor"></div></div>
-          <div class="cgrid">
-            <div class="csel" data-k="height"><span>Altura</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
-            <div class="csel" data-k="width"><span>Complexión</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
-            <div class="csel" data-k="shirt"><span>Ropa</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
-            <div class="csel" data-k="hat"><span>Sombrero</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
-            <div class="csel" data-k="glasses"><span>Gafas</span><div><button class="arr" data-d="-1">‹</button><b class="v"></b><button class="arr" data-d="1">›</button></div></div>
-            <div class="csel note"><span>Grada</span><div><i class="team-dot"></i><i class="team-dot t2"></i><em>Tu color y el de tu rival (opuesto)</em></div></div>
-          </div>
+          <div class="char-tabs" id="charTabs"></div>
+          <div class="char-content" id="charContent"></div>
         </div>
       </div>
     </div>
