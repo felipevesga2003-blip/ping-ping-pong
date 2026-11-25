@@ -19,20 +19,20 @@ export const WIDTHS = [[0.86, 'Delgado'], [1, 'Normal'], [1.16, 'Gordito'], [1.3
 export const EYES = [['normal', 'Normales'], ['sleepy', 'Entrecerrados'], ['happy', 'Felices'], ['drunk', 'Borracho'], ['red', 'Rojos'],
   ['stars', 'Estrellas'], ['lashes', 'Pestañas'], ['cyclops', 'Cíclope'], ['dots', 'Puntitos'], ['angry', 'Furiosos']];
 export const EARS = [['none', 'Ninguna'], ['cat', 'Gato'], ['bear', 'Oso'], ['bunny', 'Conejo'], ['elf', 'Elfo'], ['mouse', 'Ratón'], ['dog', 'Perro'], ['antenna', 'Antenas']];
-export const SHIRTS = [['tee', 'Camiseta'], ['tank', 'Tirantes'], ['hoodie', 'Sudadera'], ['polo', 'Polo'], ['hawaii', 'Hawaiana'], ['stripes', 'Rayas'],
+export const SHIRTS = [['tee', 'Camiseta'], ['gi', 'Gi marcial'], ['spacesuit', 'Traje espacial'], ['tank', 'Tirantes'], ['hoodie', 'Sudadera'], ['polo', 'Polo'], ['hawaii', 'Hawaiana'], ['stripes', 'Rayas'],
   ['flannel', 'Cuadros'], ['track', 'Chándal'], ['leather', 'Cuero'], ['suit', 'Traje'], ['overalls', 'Peto'], ['none', 'Sin ropa']];
 export const PANTS = [['shorts', 'Cortos'], ['long', 'Largos'], ['cargo', 'Cargo'], ['buttons', 'Con botones'], ['skirt', 'Falda']];
 export const HATS = [['none', 'Ninguno'], ['sprout', 'Brote'], ['band', 'Cinta'], ['cap', 'Gorra'], ['capback', 'Gorra al revés'], ['beanie', 'Gorro de lana'],
   ['propeller', 'Hélice'], ['tophat', 'Chistera'], ['crown', 'Corona'], ['cowboy', 'Vaquero'], ['viking', 'Vikingo'], ['chef', 'Chef'], ['pirate', 'Pirata'],
-  ['party', 'Fiesta'], ['halo', 'Aureola'], ['headphones', 'Cascos'], ['afro', 'Afro'], ['mohawk', 'Cresta'], ['buzz', 'Rapado']];
+  ['party', 'Fiesta'], ['halo', 'Aureola'], ['headphones', 'Cascos'], ['afro', 'Afro'], ['mohawk', 'Cresta'], ['buzz', 'Rapado'], ['spiky', 'Pelo de punta'], ['slick', 'Engominado'], ['helmet', 'Casco espacial']];
 export const GLASSES = [['none', 'Ninguna'], ['sun', 'De sol'], ['round', 'Redondas'], ['heart', 'Corazón'], ['patch', 'Parche']];
 export const FACES = [['none', 'Nada'], ['mustache', 'Bigote'], ['beard', 'Barba'], ['mask', 'Antifaz'], ['ninja', 'Bandana']];
 export const NECKS = [['none', 'Nada'], ['bowtie', 'Pajarita'], ['tie', 'Corbata'], ['chain', 'Cadena'], ['scarf', 'Bufanda']];
-export const BACKS = [['none', 'Nada'], ['cape', 'Capa'], ['backpack', 'Mochila'], ['wings', 'Alas']];
+export const BACKS = [['none', 'Nada'], ['cape', 'Capa'], ['backpack', 'Mochila'], ['wings', 'Alas'], ['jetpack', 'Mochila cohete']];
 
 export const DEFAULT_LOOK = {
   name: 'Tú', skin: '#4da8ff', height: 1, width: 1, eyes: 'normal', ears: 'none', shirt: 'tee', shirtColor: '#ffc93c',
-  pants: 'shorts', pantsColor: '#2c3a66', hat: 'capback', hatColor: null, glasses: 'none', face: 'none', neck: 'none', back: 'none',
+  pants: 'shorts', pantsColor: '#2c3a66', shoes: '#ffffff', hat: 'capback', hatColor: null, glasses: 'none', face: 'none', neck: 'none', back: 'none',
   accent: '#e0352b', hairColor: '#5b3a29', gloves: null, paddleType: 'balanced', paddleColor: '#f03e3e', number: 7,
 };
 export const CPU_SHIRT = '#ff5a6e';
@@ -53,6 +53,11 @@ export const OUTFITS = [
   { id: 'ninja', name: 'Ninja', look: { shirt: 'tee', shirtColor: '#1c1c24', face: 'ninja', hat: 'band', hatColor: '#e0352b', pants: 'long', pantsColor: '#1c1c24', eyes: 'angry', glasses: 'none', neck: 'none', back: 'none', ears: 'none', gloves: '#1c1c24' } },
   { id: 'king', name: 'Rey', look: { hat: 'crown', shirt: 'suit', shirtColor: '#8b2b2b', back: 'cape', accent: '#8b2b2b', neck: 'chain', face: 'beard', hairColor: '#f2eee6', pants: 'long', pantsColor: '#2d2366', glasses: 'none', ears: 'none', gloves: null } },
   { id: 'angel', name: 'Angelito', look: { hat: 'halo', shirt: 'tee', shirtColor: '#ffffff', back: 'wings', eyes: 'happy', pants: 'shorts', pantsColor: '#ffffff', face: 'none', glasses: 'none', neck: 'none', ears: 'none', gloves: null } },
+  { id: 'ranger', name: 'Guardián espacial', look: { shirt: 'spacesuit', shirtColor: '#f2f2f4', accent: '#7b4bd1', hat: 'helmet', back: 'jetpack', pants: 'long', pantsColor: '#ececf0', gloves: '#3fae3f', shoes: '#7b4bd1', face: 'none', eyes: 'normal', skin: '#f4c6a5', glasses: 'none', neck: 'none', ears: 'none' } },
+  { id: 'vice', name: 'Gánster tropical', look: { shirt: 'hawaii', shirtColor: '#2f8fd6', pants: 'long', pantsColor: '#4a6fa5', hat: 'slick', hairColor: '#2b2420', skin: '#f4c6a5', glasses: 'none', face: 'none', neck: 'chain', back: 'none', ears: 'none', gloves: null, shoes: '#2b2420', eyes: 'sleepy' } },
+  { id: 'grove', name: 'Chico del barrio', look: { shirt: 'tank', shirtColor: '#ffffff', pants: 'long', pantsColor: '#3b5a8f', hat: 'buzz', hairColor: '#1c1c24', skin: '#8a5a3c', glasses: 'none', face: 'none', neck: 'none', back: 'none', ears: 'none', gloves: null, shoes: '#1c1c24', eyes: 'normal' } },
+  { id: 'plumber2', name: 'Fontanero verde', look: { shirt: 'overalls', shirtColor: '#2f5bd3', accent: '#2fa84f', hat: 'cap', hatColor: '#2fa84f', face: 'mustache', hairColor: '#3a2416', pants: 'long', pantsColor: '#2f5bd3', gloves: '#ffffff', shoes: '#6b4a2b', skin: '#f4c6a5', eyes: 'normal', ears: 'none', glasses: 'none', neck: 'none', back: 'none' } },
+  { id: 'saiyan', name: 'Guerrero marcial', look: { shirt: 'gi', shirtColor: '#ff8a1c', accent: '#2547b8', pants: 'long', pantsColor: '#ff8a1c', hat: 'spiky', hairColor: '#1c1c24', shoes: '#2547b8', skin: '#f4c6a5', eyes: 'angry', face: 'none', glasses: 'none', neck: 'none', back: 'none', ears: 'none', gloves: null } },
   { id: 'dj', name: 'DJ', look: { hat: 'headphones', hatColor: '#1c1c24', shirt: 'hoodie', shirtColor: '#8b6cff', glasses: 'heart', neck: 'chain', pants: 'cargo', pantsColor: '#1c1c24', face: 'none', back: 'none', ears: 'none', gloves: null } },
 ];
 
@@ -202,8 +207,8 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
 
   // ---- Torso ----
   const shirt = look.shirt;
-  const sleeveShirt = ['tee', 'polo', 'hawaii', 'stripes', 'flannel', 'overalls'].includes(shirt);
-  const longSleeve = ['hoodie', 'track', 'leather', 'suit'].includes(shirt);
+  const sleeveShirt = ['tee', 'polo', 'hawaii', 'stripes', 'flannel', 'overalls', 'gi'].includes(shirt);
+  const longSleeve = ['hoodie', 'track', 'leather', 'suit', 'spacesuit'].includes(shirt);
   if (shirt !== 'none') {
     const s0 = shirt === 'hoodie' || shirt === 'leather' || shirt === 'suit' || shirt === 'track' ? 0.15 : 0.19;
     const s1 = shirt === 'tank' ? 0.5 : shirt === 'hoodie' ? 0.6 : 0.56;
@@ -238,6 +243,23 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       if (shirt === 'leather') { const z = box(0.012, H * 0.3, 0.01, 0xd8d8d8, 0, false); z.position.set(-R * 0.16, H * 0.32, zAt(0.32, R * 0.16) + 0.02); torso.add(z); }
       if (shirt === 'suit') for (let k = 0; k < 2; k++) { const b = sphere(0.016, INK, 0, false); b.position.set(0, H * (0.32 - k * 0.07), zAt(0.32 - k * 0.07, 0) + 0.02); torso.add(b); }
     }
+    if (shirt === 'gi') {
+      // gi naranja cruzado con camiseta azul en V, cinturón con nudo y faldones
+      const v = mesh(own(new THREE.CircleGeometry(R * 0.45, 3)), toon(accentHex), false);
+      v.rotation.z = -Math.PI / 2; v.scale.set(1.35, 0.8, 1); v.position.set(0, H * 0.47, zAt(0.47, 0) + 0.018); torso.add(v);
+      for (const sx of [-1, 1]) { const lap = box(0.05, 0.22, 0.02, darken(shirtHex, 0.12), 0.006, false); lap.position.set(sx * R * 0.26, H * 0.46, zAt(0.46, R * 0.26) + 0.016); lap.rotation.set(-0.1, sx * 0.3, sx * -0.45); torso.add(lap); }
+      ring(0.21, 0.035, accentHex, 0.03);
+      const knot = sphere(0.035, accentHex, 0.008, false); knot.position.set(0, H * 0.21, zAt(0.21, 0) + 0.04); torso.add(knot);
+      for (const sx of [-1, 1]) { const tail = box(0.035, 0.11, 0.015, accentHex, 0.006, false); tail.position.set(sx * 0.03, H * 0.15, zAt(0.15, 0) + 0.04); tail.rotation.z = sx * 0.2; torso.add(tail); }
+    }
+    if (shirt === 'spacesuit') {
+      // traje espacial blanco: peto verde con botones de colores, cuello morado, franjas verdes
+      const panel = box(R * 0.95, H * 0.17, 0.04, 0x3fae3f, 0.008, false); panel.position.set(0, H * 0.4, zAt(0.4, 0) + 0.005); torso.add(panel);
+      const panelTop = box(R * 0.7, H * 0.05, 0.045, 0x7b4bd1, 0.006, false); panelTop.position.set(0, H * 0.5, zAt(0.5, 0) + 0.003); torso.add(panelTop);
+      [[0xe0352b, -1], [0x3b9bff, 0], [0x3fae3f, 1]].forEach(([col, k]) => { const b = sphere(0.022, col, 0.006, false); b.scale.z = 0.5; b.position.set(k * 0.06, H * 0.41, zAt(0.41, k * 0.06) + 0.05); torso.add(b); });
+      ring(0.58, 0.04, accentHex, 0.022);
+      ring(0.24, 0.022, 0x3fae3f, 0.02);
+    }
     if (shirt === 'overalls') {
       // peto con tirantes y botones dorados sobre la camiseta
       const bib = mesh(own(lathe(H, R, belly, { s0: 0.18, s1: 0.42, extra: 0.024, n: 10 })), toon(shirtHex)); torso.add(bib);
@@ -249,7 +271,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       }
     }
     // número a la espalda (lo ves durante todo el partido)
-    if (shirt !== 'overalls') {
+    if (shirt !== 'overalls' && shirt !== 'gi' && shirt !== 'spacesuit') {
       const numMat = own(new THREE.MeshBasicMaterial({ map: own(numberTexture(look.number, lightShirt ? '#2d2366' : '#ffffff')), transparent: true, depthWrite: false }));
       const sN = 0.38, rN = surf(sN) + 0.022;
       const num = new THREE.Mesh(own(new THREE.CylinderGeometry(rN, rN, H * 0.22, 20, 1, true, Math.PI - 0.6, 1.2)), numMat);
@@ -403,6 +425,17 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   if (back === 'backpack') {
     const bp = box(R * 1.1, H * 0.32, 0.16, accentHex, 0.014); bp.position.set(0, H * 0.4, -surf(0.4) - 0.05); torso.add(bp);
     const pk = box(R * 0.8, H * 0.12, 0.06, darken(accentHex, 0.2), 0.008, false); pk.position.set(0, H * 0.33, -surf(0.4) - 0.14); torso.add(pk);
+  }
+  if (back === 'jetpack') {
+    const pack = box(R * 0.9, H * 0.34, 0.16, 0xf2f2f4, 0.014); pack.position.set(0, H * 0.43, -surf(0.43) - 0.05); torso.add(pack);
+    const top = cyl(0.05, 0.05, 0.05, 0x7b4bd1, 0.01, false); top.position.set(0, H * 0.62, -surf(0.43) - 0.05); torso.add(top);
+    for (const sx of [-1, 1]) {
+      const w = new THREE.Group(); w.position.set(sx * R * 0.4, H * 0.48, -surf(0.48) - 0.08); torso.add(w);
+      const wing = box(0.34, 0.035, 0.12, 0xf2f2f4, 0.01); wing.position.x = sx * 0.17; wing.rotation.z = sx * -0.15; w.add(wing);
+      const stripe = box(0.12, 0.04, 0.125, 0x3fae3f, 0, false); stripe.position.x = sx * 0.2; stripe.rotation.z = sx * -0.15; w.add(stripe);
+      const tip = box(0.05, 0.045, 0.13, 0xe0352b, 0.006, false); tip.position.x = sx * 0.33; tip.rotation.z = sx * -0.15; w.add(tip);
+      wings.push({ w, sx, jet: true });
+    }
   }
   if (back === 'wings') for (const sx of [-1, 1]) {
     const w = new THREE.Group(); w.position.set(sx * R * 0.3, H * 0.55, -surf(0.55) + 0.02); torso.add(w);
@@ -567,6 +600,37 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       break;
     }
     case 'buzz': { const d = dome(hatR + 0.004, hairHex, 0.55); d.position.y = -0.02; hat.add(d); break; }
+    case 'spiky': {
+      // melena de puntas hacia arriba y hacia fuera
+      const d = dome(hatR + 0.01, hairHex, 0.7); d.position.y = -0.03; hat.add(d);
+      const spikes = [[0, 0.32, 0, 0], [0.12, 0.27, -0.05, 0.45], [-0.12, 0.27, -0.05, -0.45], [0.2, 0.18, -0.02, 0.9], [-0.2, 0.18, -0.02, -0.9],
+        [0.08, 0.24, -0.15, 0.3], [-0.08, 0.24, -0.15, -0.3], [0.17, 0.08, 0.06, 1.2], [-0.17, 0.08, 0.06, -1.2], [0, 0.2, 0.1, 0.05]];
+      for (const [x, y, z, rz] of spikes) {
+        const s = mesh(own(new THREE.ConeGeometry(0.07, 0.24, 7)), toon(hairHex));
+        s.position.set(x * R / 0.31, y + top * 0.35 - 0.12, z); s.rotation.set(z * -2, 0, -rz); hat.add(s);
+        const so = new THREE.Mesh(own(new THREE.ConeGeometry(0.085, 0.27, 7)), outlineMat); so.position.copy(s.position); so.rotation.copy(s.rotation); so.position.y -= 0.01; hat.add(so);
+      }
+      for (const sx of [-1, 0.4, 1]) { const f = mesh(own(new THREE.ConeGeometry(0.04, 0.12, 6)), toon(hairHex), false); f.position.set(sx * 0.07, -0.02, hatR * 0.9); f.rotation.set(1.9, 0, sx * 0.5); hat.add(f); }
+      break;
+    }
+    case 'slick': {
+      const d = dome(hatR + 0.012, hairHex, 0.62); d.position.y = -0.03; hat.add(d);
+      const swoop = sphere(0.09, hairHex, 0.014); swoop.scale.set(1.6, 0.55, 1); swoop.position.set(0.03, (hatR + 0.012) * 0.5, hatR * 0.55); swoop.rotation.z = -0.2; hat.add(swoop);
+      break;
+    }
+    case 'helmet': {
+      // capucha morada + casco esférico de cristal
+      const hood = dome(hatR + 0.012, accentHex, 0.95); hood.position.y = -0.08; hat.add(hood);
+      const glassR = Math.max(H - H * 0.5, R * 1.15) * 0.62 + 0.05;
+      const glass = new THREE.Mesh(own(new THREE.SphereGeometry(glassR, 28, 20)), own(new THREE.MeshBasicMaterial({ color: 0xd8f3ff, transparent: true, opacity: 0.3, depthWrite: false })));
+      glass.position.set(0, H * 0.74 - hatY + 0.02, 0.02); hat.add(glass);
+      const edge = new THREE.Mesh(glass.geometry, own(new THREE.MeshBasicMaterial({ color: 0x9fdcff, side: THREE.BackSide, transparent: true, opacity: 0.75, depthWrite: false })));
+      edge.scale.setScalar(1.045); glass.add(edge);
+      const shine = mesh(own(new THREE.SphereGeometry(glassR * 0.18, 12, 8)), own(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })), false);
+      shine.scale.set(1, 0.5, 0.3); shine.position.set(-glassR * 0.45, H * 0.74 - hatY + glassR * 0.5, glassR * 0.62); hat.add(shine);
+      const rim = mesh(own(new THREE.TorusGeometry(glassR * 0.98, 0.03, 8, 40)), toon(0x7b4bd1), false); rim.rotation.x = Math.PI / 2; rim.position.y = H * 0.74 - hatY - glassR * 0.55; rim.scale.set(1, 1, 0.9); hat.add(rim);
+      break;
+    }
     default: break;
   }
 
@@ -574,7 +638,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   const feet = [];
   for (const sx of [-1, 1]) {
     const f = new THREE.Group(); f.position.set(sx * Math.max(0.12, R * 0.45), 0.06, 0.03); root.add(f);
-    const shoe = sphere(0.1, 0xffffff, 0.016); shoe.scale.set(1, 0.62, 1.45); f.add(shoe);
+    const shoe = sphere(0.1, new THREE.Color(look.shoes || '#ffffff').getHex(), 0.016); shoe.scale.set(1, 0.62, 1.45); f.add(shoe);
     const sole = cyl(0.1, 0.1, 0.03, shirtHex === 0xffffff ? 0x2d2366 : shirtHex, 0.012, false); sole.scale.set(1, 1, 1.45); sole.position.y = -0.04; f.add(sole);
     const lace = box(0.08, 0.012, 0.03, INK, 0, false); lace.position.set(0, 0.055, 0.06); f.add(lace);
     feet.push(f);
@@ -594,6 +658,8 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   armPivot.add(arm);
   const sleeveCol = shirt === 'overalls' ? accentHex : shirtHex;
   if (sleeveShirt) { const sleeve = cyl(0.064, 0.07, 0.11, sleeveCol, 0.014); sleeve.position.y = -0.1; arm.add(sleeve); }
+  if (shirt === 'gi') { const wb = cyl(0.058, 0.058, 0.06, accentHex, 0.012); wb.position.y = 0.1; arm.add(wb); }
+  if (shirt === 'spacesuit') { const sb = cyl(0.056, 0.056, 0.05, 0x3fae3f, 0.01, false); sb.position.y = 0.02; arm.add(sb); }
   const hand = sphere(0.068, handCol, 0.016); hand.position.copy(handPos); armPivot.add(hand);
   arm.children[0].material = ghostArm; arm.children[1].material = ghostLine;
   hand.children[0].material = ghostHand; hand.children[1].material = ghostLine;
@@ -622,6 +688,8 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   offArm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), offPos.clone().normalize());
   offPivot.add(offArm);
   if (sleeveShirt) { const sl = cyl(0.062, 0.068, 0.1, sleeveCol, 0.014); sl.position.y = -0.08; offArm.add(sl); }
+  if (shirt === 'gi') { const wb = cyl(0.056, 0.056, 0.06, accentHex, 0.012); wb.position.y = 0.08; offArm.add(wb); }
+  if (shirt === 'spacesuit') { const sb = cyl(0.054, 0.054, 0.05, 0x3fae3f, 0.01, false); sb.position.y = 0.01; offArm.add(sb); }
   const offHand = sphere(0.066, handCol, 0.016); offHand.position.copy(offPos); offPivot.add(offHand);
   // Juez: sin raqueta, con silbato y un mosaico de censura para sus gestos poco deportivos
   let censor = null, whistle = null;
@@ -729,7 +797,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     if (propeller) propeller.rotation.y += dt * (6 + sp * 10 + (celebrating ? 20 : 0));
     if (halo) halo.position.y = top + 0.14 + Math.sin(t * 2) * 0.015;
     if (cape) cape.rotation.x = ease(cape.rotation.x, -Math.min(0.9, sp * 0.3) - (jump > 0.05 ? 0.25 : 0) + Math.sin(t * 3) * 0.03, dt * 6);
-    for (const w of wings) w.w.rotation.y = w.sx * (0.35 + Math.sin(t * (celebrating ? 18 : 4)) * 0.25);
+    for (const w of wings) { if (w.jet) w.w.rotation.y = w.sx * (celebrating ? 0.15 : 0.05); else w.w.rotation.y = w.sx * (0.35 + Math.sin(t * (celebrating ? 18 : 4)) * 0.25); }
     for (const e of earParts) if (look.ears === 'bunny' || look.ears === 'dog') e.g.rotation.x = Math.sin(st.walk * 0.5 + t) * 0.12 * (0.3 + Math.min(1, sp));
 
     // Brazo con pala
