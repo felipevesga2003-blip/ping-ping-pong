@@ -100,6 +100,14 @@ export const SFX = {
   cheer() { if (!on()) return; noise(1.6, 0.22, 1100, { attack: 0.25, q: 0.4 }); noise(1.2, 0.12, 2400, { attack: 0.2, q: 0.6, delay: 0.1 }); },
   aww() { if (!on()) return; tone(420, 0.6, 'sine', 0.07, 250); noise(0.9, 0.08, 700, { attack: 0.2, q: 0.5 }); },
   whiff() { if (!on()) return; tone(300, 0.15, 'triangle', 0.08, 180); },
+  // cuenta atrás: tres pitidos cortos y uno largo y agudo al «¡YA!»
+  count(n) { if (!on()) return; n > 0 ? tone(660, 0.12, 'square', 0.07) : (tone(1320, 0.32, 'square', 0.08), tone(1980, 0.25, 'triangle', 0.04, 0, 0.03)); },
+  emote(id) {
+    if (!on()) return;
+    const S = { dance: [[784, 0], [988, 0.1], [1175, 0.2], [988, 0.3]], laugh: [[700, 0], [620, 0.09], [700, 0.18], [620, 0.27]], taunt: [[300, 0], [200, 0.12]],
+      cry: [[520, 0], [440, 0.18], [370, 0.36]], love: [[880, 0], [1320, 0.14]], angry: [[160, 0], [150, 0.1], [140, 0.2]] }[id] || [[600, 0]];
+    for (const [f, d] of S) tone(f, 0.14, id === 'angry' || id === 'taunt' ? 'sawtooth' : 'triangle', 0.06, 0, d);
+  },
   blip() { tone(880, 0.035, 'triangle', 0.07, 1100); },
   select() { tone(520, 0.08, 'triangle', 0.1, 780); tone(1040, 0.12, 'triangle', 0.07, 0, 0.06); },
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.28, 'square', 0.08, 0, i * 0.12)); },

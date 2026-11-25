@@ -19,6 +19,7 @@ export const CONTROLS = {
       ['Bola alta', '<b class="c-smash">Smash</b> automático'],
       ['Rueda', 'Cámara · al tope, 1ª persona'],
       ['WASD', 'Moverte (modo manual)'],
+      ['1 – 6', 'Emotes: baile, risa, burla, llanto…'],
     ],
   },
   free: {
@@ -32,6 +33,7 @@ export const CONTROLS = {
       ['Clic der.', 'Gira la pala → · dirige y curva'],
       ['Bola alta', 'Swing fuerte = <b class="c-smash">smash</b>'],
       ['Rueda', 'Cámara · al tope, 1ª persona'],
+      ['1 – 6', 'Emotes: baile, risa, burla, llanto…'],
     ],
   },
 };

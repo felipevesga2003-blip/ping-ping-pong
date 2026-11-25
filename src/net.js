@@ -1,7 +1,7 @@
 // =============================================================
-//  RED — conexión P2P con WebRTC (PeerJS)
-//  El anfitrión crea una sala con un código; el invitado se une con él.
-//  PeerJS aporta la señalización gratuita + STUN/TURN públicos.
+//  RED — conexión P2P con WebRTC (PeerJS), topología en estrella
+//  El anfitrión acepta varias conexiones (2v2) y reenvía mensajes;
+//  cada invitado solo habla con el anfitrión.
 // =============================================================
 const PREFIX = 'pingpingpong-v1-';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // sin 0/O/1/I para dictarlo sin errores
@@ -34,16 +34,17 @@ function errorText(e) {
   }
 }
 
-// handlers: { onStatus(state, info), onOpen(), onMessage(msg), onClose(reason), onError(text) }
+// h: { onStatus(state, info), onPeerOpen(id), onData(id, msg), onPeerClose(id), onError(text) }
 export function createNet(h) {
-  let peer = null, conn = null, joinTimer = 0, closing = false;
+  let peer = null, joinTimer = 0, closing = false;
+  const conns = new Map();          // id → DataConnection
 
-  function attach(c) {
-    conn = c;
-    c.on('open', () => { clearTimeout(joinTimer); h.onOpen(); });
-    c.on('data', d => h.onMessage(d));
-    c.on('close', () => { if (!closing) h.onClose('Tu rival se desconectó.'); conn = null; });
-    c.on('error', () => { if (!closing) h.onClose('Se perdió la conexión con tu rival.'); });
+  function attach(c, id) {
+    c.on('open', () => { conns.set(id, c); clearTimeout(joinTimer); h.onPeerOpen(id); });
+    c.on('data', d => h.onData(id, d));
+    const gone = () => { if (!conns.has(id)) return; conns.delete(id); if (!closing) h.onPeerClose(id); };
+    c.on('close', gone);
+    c.on('error', gone);
   }
 
   async function host(tries = 0) {
@@ -54,12 +55,10 @@ export function createNet(h) {
     const code = makeCode();
     peer = new Peer(PREFIX + code, { debug: 0 });
     peer.on('open', () => h.onStatus('waiting', code));
-    peer.on('connection', c => {
-      if (conn) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); }); return; }
-      attach(c);
-    });
+    peer.on('connection', c => attach(c, c.peer));
     peer.on('error', e => {
       if (e.type === 'unavailable-id' && tries < 3) { host(tries + 1); return; }
+      if (e.type === 'peer-unavailable') return;          // un invitado que se fue
       h.onError(errorText(e));
     });
     peer.on('disconnected', () => { if (!closing && peer && !peer.destroyed) peer.reconnect(); });
@@ -72,19 +71,25 @@ export function createNet(h) {
     const Peer = await loadPeer();
     peer = new Peer(undefined, { debug: 0 });
     peer.on('open', () => {
-      attach(peer.connect(PREFIX + code, { reliable: true, serialization: 'json' }));
-      joinTimer = setTimeout(() => { if (!conn || !conn.open) h.onError('La sala no responde. Comprueba el código.'); }, 15000);
+      attach(peer.connect(PREFIX + code, { reliable: true, serialization: 'json' }), 'host');
+      joinTimer = setTimeout(() => { if (!conns.size) h.onError('La sala no responde. Comprueba el código.'); }, 15000);
     });
     peer.on('error', e => h.onError(errorText(e)));
   }
 
-  function send(m) { if (conn && conn.open) conn.send(m); }
+  // to: id concreto; except: no enviar a ese id (reenvíos); sin "to" = a todos
+  function send(m, to, except) {
+    if (to) { const c = conns.get(to); if (c && c.open) c.send(m); return; }
+    for (const [id, c] of conns) if (id !== except && c.open) c.send(m);
+  }
+  function kick(id) { const c = conns.get(id); if (c) { conns.delete(id); setTimeout(() => { try { c.close(); } catch (e) { /* */ } }, 300); } }
   function leave() {
     closing = true;
     clearTimeout(joinTimer);
-    try { conn && conn.close(); } catch (e) { /* ya cerrada */ }
+    for (const c of conns.values()) { try { c.close(); } catch (e) { /* ya cerrada */ } }
+    conns.clear();
     try { peer && peer.destroy(); } catch (e) { /* ya destruido */ }
-    conn = null; peer = null;
+    peer = null;
   }
-  return { host, join, send, leave, get open() { return !!(conn && conn.open); } };
+  return { host, join, send, kick, leave, get count() { return conns.size; } };
 }

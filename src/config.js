@@ -58,3 +58,22 @@ export const PALETTE = {
   skyLow: '#fff1dc',
   fog: 0xd7efff,
 };
+
+// Raquetas: multiplicadores sobre velocidad, efecto, control (ventana de timing / error) y remate
+export const PADDLES = {
+  balanced: { name: 'Equilibrada', desc: 'Sin puntos débiles.', speed: 1, spin: 1, ctrl: 1, smash: 1 },
+  fast:     { name: 'Rayo', desc: 'Bolas más rápidas, menos efecto.', speed: 1.12, spin: 0.85, ctrl: 0.92, smash: 1.05 },
+  spin:     { name: 'Remolino', desc: 'Mucho más efecto y curva.', speed: 0.94, spin: 1.35, ctrl: 0.95, smash: 0.95 },
+  control:  { name: 'Muro', desc: 'Ventana de golpe amplia y precisa.', speed: 0.94, spin: 1, ctrl: 1.25, smash: 0.95 },
+  power:    { name: 'Martillo', desc: 'Remates demoledores, menos precisa.', speed: 1.05, spin: 0.9, ctrl: 0.88, smash: 1.22 },
+};
+// Emotes (teclas 1–6 / cruceta del mando)
+export const EMOTES = [
+  { id: 'dance', name: 'Bailecito', key: '1' },
+  { id: 'laugh', name: 'Jajaja', key: '2' },
+  { id: 'taunt', name: 'Burla', key: '3' },
+  { id: 'cry', name: 'Llorar', key: '4' },
+  { id: 'love', name: 'Amor', key: '5' },
+  { id: 'angry', name: 'Furia', key: '6' },
+];
+export const COUNTDOWN = 1.3;   // s de cuenta atrás antes de cada saque

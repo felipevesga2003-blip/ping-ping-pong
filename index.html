@@ -166,13 +166,13 @@
             <div class="on-card">
               <div class="on-tag">Anfitrión</div>
               <b>Crear sala</b>
-              <p>Tu navegador hace de servidor. Te damos un código para tu rival.</p>
+              <p>Tu navegador hace de servidor. Elige 1 contra 1 o 2 contra 2 y comparte el código.</p>
               <button class="cta small" id="hostBtn"><span class="cta-txt">Crear sala</span></button>
             </div>
             <div class="on-card">
               <div class="on-tag alt">Invitado</div>
               <b>Unirse a sala</b>
-              <p>Escribe el código de 5 letras que te pasó tu rival.</p>
+              <p>Escribe el código de 5 letras que te pasaron.</p>
               <div class="join-row"><input id="joinCode" maxlength="5" placeholder="CÓDIGO" spellcheck="false" autocomplete="off"><button class="join-btn" id="joinBtn">Entrar</button></div>
             </div>
           </div>
@@ -183,11 +183,8 @@
               <div class="room-actions"><button id="copyCode">Copiar código</button><button id="copyLink">Copiar enlace</button></div>
             </div>
             <div class="room-status" id="roomStatusBox"><i class="spinner"></i><span id="roomStatus">Creando sala…</span></div>
-            <div class="room-vs hidden" id="roomVs">
-              <div class="rv p1"><svg class="bean" id="rvBean0"><use href="#i-bean"/></svg><b id="rvName0">Tú</b></div>
-              <div class="vs-badge">VS</div>
-              <div class="rv p2"><svg class="bean" id="rvBean1"><use href="#i-bean"/></svg><b id="rvName1">Rival</b></div>
-            </div>
+            <div class="room-mode" id="roomMode"></div>
+            <div class="room-vs hidden" id="roomVs"></div>
             <button class="cta" id="onlineStart" hidden><span class="cta-txt">Empezar partido</span><kbd>Enter</kbd></button>
             <button class="ghost-link" id="leaveRoom">Salir de la sala</button>
           </div>
@@ -323,6 +320,7 @@
   <div id="camTag"></div>
   <div id="netTag" class="hidden"><i></i><span id="netPing">— ms</span></div>
   <div id="banner"></div>
+  <div id="count"></div>
   <div id="controls"></div>
   <div id="touch" class="hidden">
     <button id="tTop" class="tbtn top">Liftado</button>
@@ -358,6 +356,29 @@
       <button class="mbtn primary" id="againBtn"><span>Revancha</span><kbd>Enter</kbd></button>
       <button class="mbtn" id="menuBtn"><span>Menú principal</span></button>
     </div>
+  </div>
+</div>
+
+<!-- ================= PRELOBBY ================= -->
+<div id="prelobby" class="screen dim hidden">
+  <div class="sheet wide">
+    <div class="sheet-kicker" id="plKicker">Prepara el partido</div>
+    <h2 class="sheet-title small" id="plTitle">Partido rápido</h2>
+    <div class="set-list">
+      <div class="set-row"><div class="set-lbl"><b>Modo</b><span id="plModeDesc">Tú contra un rival</span></div>
+        <div class="seg2" data-k="mode"><button data-v="1v1">1 contra 1</button><button data-v="2v2">2 contra 2</button></div></div>
+      <div class="set-row" id="plDiffRow"><div class="set-lbl"><b id="plDiffLbl">Rival</b><span id="plDiffDesc">Nivel de la CPU</span></div>
+        <div class="seg2" data-k="diff"><button data-v="0">Fácil</button><button data-v="1">Normal</button><button data-v="2">Difícil</button><button data-v="3">Pro</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Formato</b><span>Cuántos juegos (sets) se disputan</span></div>
+        <div class="seg2" data-k="bestOf"><button data-v="1">Un juego</button><button data-v="3">Mejor de 3</button><button data-v="5">Mejor de 5</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Puntos por juego</b><span>Con 2 de ventaja para ganar</span></div>
+        <div class="seg2" data-k="target"><button data-v="5">5</button><button data-v="7">7</button><button data-v="11">11</button><button data-v="21">21</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Movimiento</b><span>Automático: tu frijolito corre solo a la bola</span></div>
+        <div class="seg2" data-k="assist"><button data-v="1">Automático</button><button data-v="0">Manual</button></div></div>
+      <div class="set-row"><div class="set-lbl"><b>Tu raqueta</b><span id="plPaddleDesc">Equilibrada</span></div>
+        <div class="seg2"><button id="plPaddle">Cambiar</button></div></div>
+    </div>
+    <div class="btn-stack row"><button class="mbtn primary" id="plGo"><span id="plGoTxt">¡A jugar!</span><kbd>Enter</kbd></button><button class="mbtn" id="plBack"><span>Volver</span><kbd>Esc</kbd></button></div>
   </div>
 </div>
 

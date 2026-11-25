@@ -7,7 +7,7 @@ import * as P from './physics.js';
 import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ } from './game.js';
 import { createSky, createTable, createBall } from './models.js';
 import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDist } from './character.js';
-import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot } from './game.js';
+import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot, doEmote } from './game.js';
 import { createOnline } from './online.js';
 import { createArena } from './arena.js';
 import { createFX } from './fx.js';
@@ -67,75 +67,88 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
 
-// ---------- Personajes ----------
-let cpuLookIdx = -1;
-function rebuildPlayer() {
-  const fp = fpActive;
-  if (views[0]) views[0].dispose();
-  views[0] = createCharacter(settings.look, { rotationY: Math.PI });
-  scene.add(views[0].root);
-  if (fp) views[0].setFirstPerson(true);
-  applyTeamColors();
+// ---------- Jugadores y personajes ----------
+// roster: un jugador por índice local (0 yo · 1 rival · 2 compañero · 3 rival 2)
+let roster = [], teamShirts = ['#ffc93c', '#3cb5ff'];
+const lookOf = i => (i === 0 ? settings.look : roster[i].look);
+function cpuRoster(mode) {
+  const d = +settings.diff, me = { look: settings.look, ctrl: 'human' };
+  if (mode !== '2v2') return [me, { look: CPU_LOOKS[d], ctrl: 'ai' }];
+  return [me, { look: CPU_LOOKS[d], ctrl: 'ai' }, { look: CPU_LOOKS[(d + 1) % 4], ctrl: 'ai' }, { look: CPU_LOOKS[(d + 2) % 4], ctrl: 'ai' }];
 }
-let cpuShirt = rivalColor(settings.look.shirtColor);
-let remoteLook = null;          // aspecto del rival online (null = CPU)
-// Color del rival: online respeta su elección salvo que choque con la mía
-// En una sala online (aunque aún no haya empezado el partido) el rival mostrado es el remoto
-const showRemote = () => !!remoteLook && (G.online || online.playing);
-function opponentShirt() {
-  const mine = settings.look.shirtColor;
-  if (showRemote()) return hueDist(remoteLook.shirtColor, mine) < 0.08 ? rivalColor(mine) : remoteLook.shirtColor;
-  return rivalColor(mine);
+function demoRoster() {
+  // en una sala 1v1, la escena del menú ya muestra a tu rival
+  const others = online.S.active ? online.S.players.filter(p => p.slot !== online.S.slot) : [];
+  const opp = others.length && online.S.cfg && online.S.cfg.mode !== '2v2' ? { ...DEFAULT_LOOK, ...others[0].look } : null;
+  return [{ look: settings.look, ctrl: 'ai' }, { look: opp || CPU_LOOKS[2], ctrl: 'ai', remoteLook: !!opp }];
 }
-function rebuildCpu(force = false) {
-  const idx = showRemote() ? 'online' : G.demo ? 2 : +settings.diff;
-  if (idx === cpuLookIdx && !force) return;
-  cpuLookIdx = idx;
-  if (views[1]) views[1].dispose();
-  views[1] = createCharacter(showRemote() ? { ...remoteLook, shirtColor: opponentShirt() } : cpuLookFor(idx, settings.look.shirtColor));
-  scene.add(views[1].root);
+function teamColors() {
+  const mine = settings.look.shirtColor, o = roster[1];
+  const theirs = o && (o.ctrl === 'remote' || o.remoteLook) && o.look.shirtColor && hueDist(o.look.shirtColor, mine) >= 0.08 ? o.look.shirtColor : rivalColor(mine);
+  return [mine, theirs];
 }
-// El rival siempre viste el color opuesto al del jugador
-function applyTeamColors() {
-  const c1 = settings.look.shirtColor;
-  cpuShirt = opponentShirt();
-  arena.setTeams(c1, cpuShirt);
-  document.documentElement.style.setProperty('--team1', c1);
-  document.documentElement.style.setProperty('--team2', cpuShirt);
-  COLS[0] = new THREE.Color(c1).getHex();
-  COLS[1] = new THREE.Color(cpuShirt).getHex();
-  if (views[1]) rebuildCpu(true);
+// Cada equipo viste su color (en dobles, los compañeros van uniformados)
+function buildViews() {
+  views.forEach(v => v && v.dispose()); views.length = 0;
+  teamShirts = teamColors();
+  roster.forEach((p, i) => {
+    const team = i % 2;
+    let look;
+    if (i === 0) look = settings.look;
+    else if (p.ctrl === 'remote' || p.remoteLook) look = { ...DEFAULT_LOOK, ...p.look, shirtColor: teamShirts[team] };
+    else {
+      const ci = Math.max(0, CPU_LOOKS.indexOf(p.look));
+      look = { ...cpuLookFor(ci, settings.look.shirtColor), shirtColor: teamShirts[team] };
+    }
+    const v = createCharacter(look, { rotationY: team === 0 ? Math.PI : 0 });
+    scene.add(v.root); views[i] = v;
+  });
+  if (fpActive) views[0].setFirstPerson(true);
+  arena.setTeams(teamShirts[0], teamShirts[1]);
+  document.documentElement.style.setProperty('--team1', teamShirts[0]);
+  document.documentElement.style.setProperty('--team2', teamShirts[1]);
+  COLS[0] = COLS[2] = new THREE.Color(teamShirts[0]).getHex();
+  COLS[1] = COLS[3] = new THREE.Color(teamShirts[1]).getHex();
 }
+const rebuildPlayer = () => buildViews();
+const paddlesOf = () => roster.map((p, i) => (i === 0 ? settings.look.paddleType : p.look.paddleType) || 'balanced');
 function applySettings() {
   G.diff = +settings.diff; G.target = +settings.target; G.assist = !!+settings.assist; G.control = settings.control;
   try { localStorage.setItem('ppp-settings', JSON.stringify(settings)); } catch (e) { /* sin storage */ }
 }
 applySettings();
 const free = () => G.control === 'free';
+const teamName = t => roster.map((p, i) => ({ p, i })).filter(x => x.i % 2 === t)
+  .map(x => (x.i === 0 ? (settings.look.name || 'Tú') : x.p.look.name)).join(' & ');
 
 // ---------- Pantallas ----------
 function show(id, on) { $(id).classList.toggle('hidden', !on); }
-function startGame() {
+function enterGame() {
   initAudio(); SFX.select();
   screen = 'game'; setSfxEnabled(true);
-  show('menu', false); show('over', false); show('pause', false); show('hud', true);
+  show('menu', false); show('over', false); show('pause', false); show('prelobby', false); show('hud', true);
   renderControls(settings.control);
   $('controls').classList.toggle('off', !+settings.showControls);
-  newMatch(false);
+}
+function startGame() {
+  enterGame(); show('netTag', false);
+  roster = cpuRoster(settings.mode);
+  buildViews();
+  newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf() });
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
   screen = 'menu'; setSfxEnabled(false);
   show('menu', true); show('over', false); show('pause', false); show('hud', false); show('netTag', false);
   if (wasOnline && !keepRoom) { online.send({ t: 'bye' }); online.leave(); }
-  remoteLook = keepRoom ? remoteLook : null;
+  else if (wasOnline) online.endMatch();
   newMatch(true);
-  applyTeamColors(); rebuildCpu(true);
+  roster = demoRoster(); buildViews();
   menu.refresh();
 }
 function setPause(on) {
@@ -149,39 +162,104 @@ function setPause(on) {
   }
 }
 
+// ---------- Prelobby: configurar el partido ----------
+let plFor = 'cpu';
+function openPrelobby(kind) {
+  plFor = kind; initAudio(); SFX.blip();
+  $('plTitle').textContent = kind === 'online' ? 'Crear sala' : 'Partido rápido';
+  $('plKicker').textContent = kind === 'online' ? 'Configura la sala online' : 'Prepara el partido';
+  $('plGoTxt').textContent = kind === 'online' ? 'Crear sala' : '¡A jugar!';
+  $('plDiffLbl').textContent = kind === 'online' ? 'CPU de relleno' : 'Rival';
+  $('plDiffDesc').textContent = kind === 'online' ? 'Nivel de la CPU si faltan jugadores' : 'Nivel de la CPU';
+  refreshPrelobby(); show('prelobby', true);
+}
+function refreshPrelobby() {
+  document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(settings[s.dataset.k]) === b.dataset.v)));
+  $('plModeDesc').textContent = settings.mode === '2v2'
+    ? (plFor === 'online' ? 'Hasta 4 jugadores: dos equipos de dos' : 'Tú y un compañero CPU contra dos CPU')
+    : (plFor === 'online' ? 'Tú contra otro jugador' : 'Tú contra la CPU');
+  const pt = C.PADDLES[settings.look.paddleType] || C.PADDLES.balanced;
+  $('plPaddleDesc').textContent = `${pt.name} · ${pt.desc}`;
+}
+document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  settings[s.dataset.k] = b.dataset.v; applySettings(); SFX.blip(); refreshPrelobby(); menu.refresh();
+}));
+const prelobbyOpen = () => !$('prelobby').classList.contains('hidden');
+function prelobbyGo() { show('prelobby', false); if (plFor === 'online') online.host(); else startGame(); }
+$('plGo').onclick = prelobbyGo;
+$('plBack').onclick = () => { show('prelobby', false); SFX.blip(); };
+$('plPaddle').onclick = () => { show('prelobby', false); menu.go('char'); if (menu.charTab) menu.charTab('paddle'); };
+
 // ---------- Online ----------
-let rematch = { me: false, them: false }, stTimer = 0;
+let rematch = { me: false, them: new Set() }, stTimer = 0;
+const teamOfSlot = s => s % 2;
+function localOf(s) {
+  const g = online.S.slot;
+  if (s === g) return 0;
+  if (teamOfSlot(s) === teamOfSlot(g)) return 2;
+  return s < 2 ? 1 : 3;
+}
+function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) return s; return li; }
+const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
-  getHello: () => ({ look: settings.look, control: settings.control, v: 1 }),
-  getTarget: () => +settings.target,
+  getLook: () => settings.look,
+  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target }),
+  botLook: s => ({ ...CPU_LOOKS[(+settings.diff + s) % 4] }),
   blip: () => { initAudio(); SFX.blip(); },
-  onReady: hello => { remoteLook = { ...DEFAULT_LOOK, ...hello.look }; applyTeamColors(); rebuildCpu(true); SFX.select(); if (DEBUG === 'bot' && online.S.isHost) setTimeout(() => online.start(), 500); },
-  onStart: ({ firstServer, target }) => startOnline(firstServer, target),
-  onMessage: m => {
+  openPrelobby,
+  onRoster: players => {
+    if (screen === 'menu') { roster = demoRoster(); buildViews(); }
+    menu.refresh();
+    const need = +(new URLSearchParams(location.search).get('need') || 2);
+    if (DEBUG === 'bot' && online.S.isHost && players.length >= need && !online.S.inMatch) setTimeout(() => { if (!online.S.inMatch) online.start(); }, 600);
+  },
+  onStart: m => startOnline(m),
+  onMessage: m => handleNet(m),
+  onPlayerLeft: (slot, name) => {
     if (!G.online) return;
-    if (m.t === 'st') setRemoteState(m);
-    else if (m.t === 'hit') applyRemoteHit(m, (online.S.rtt / 2000) * C.TIME_SCALE);
-    else if (m.t === 'pt') applyRemotePoint(m);
-    else if (m.t === 'rematch') { rematch.them = true; tryRematch(); }
-    else if (m.t === 'bye') onlineClosed(`${remoteLook ? remoteLook.name : 'Tu rival'} abandonó el partido.`);
+    const li = localOf(slot), c = G.chars[li];
+    if (G.chars.length === 2) { onlineClosed(`${name} abandonó el partido.`); return; }
+    if (c) { c.remote = false; c.ai = true; roster[li].ctrl = 'ai'; }
+    banner('Jugador fuera', `${name} se fue: le sustituye la CPU`, '#ff5a6e');
   },
   onClosed: reason => onlineClosed(reason),
-  onLook: look => { remoteLook = { ...DEFAULT_LOOK, ...look }; applyTeamColors(); rebuildCpu(true); refreshHUD(); },
-  onLeft: () => { if (!G.online) { remoteLook = null; applyTeamColors(); rebuildCpu(true); } },
+  onLeft: () => { if (screen === 'menu') { roster = demoRoster(); buildViews(); } },
 });
-function startOnline(firstServer, target) {
-  initAudio(); SFX.select();
-  rematch = { me: false, them: false };
-  screen = 'game'; setSfxEnabled(true);
-  show('menu', false); show('over', false); show('pause', false); show('hud', true); show('netTag', true);
+function startOnline(m) {
+  enterGame(); show('netTag', true);
+  rematch = { me: false, them: new Set() };
   $('againBtn').classList.remove('waiting');
-  renderControls(settings.control);
-  $('controls').classList.toggle('off', !+settings.showControls);
-  newMatch(false, { online: true, firstServer, target });
-  applyTeamColors(); rebuildCpu(true);
+  const cfg = m.cfg, n = cfg.mode === '2v2' ? 4 : 2, g = online.S.slot;
+  roster = [];
+  for (let li = 0; li < n; li++) {
+    const s = globalOf(li), p = m.players.find(x => x.slot === s) || { look: CPU_LOOKS[0], bot: true };
+    roster[li] = { look: { ...DEFAULT_LOOK, ...p.look }, ctrl: s === g ? 'human' : p.bot && online.S.isHost ? 'ai' : 'remote', slot: s };
+  }
+  buildViews();
+  newMatch(false, {
+    online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
+    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(),
+  });
   if (DEBUG === 'bot') G.chars[0].ai = true;
   refreshHUD();
 }
+// Mensajes de juego: m.from = hueco del emisor · m.ft = equipo cuyo marco usa el mensaje
+function handleNet(m) {
+  if (!G.online || m.from === undefined) return;
+  const li = localOf(m.from), rot = (m.ft ?? teamOfSlot(m.from)) !== myFrame();
+  switch (m.t) {
+    case 'st': setRemoteState(li, m, rot); break;
+    case 'hit': applyRemoteHit(m, li, rot, (online.S.rtt / 2000) * C.TIME_SCALE); break;
+    case 'pt': applyRemotePoint(m, rot); break;
+    case 'emote': doEmote(li, m.id, true); break;
+    case 'rematch': rematch.them.add(m.from); tryRematch(); break;
+    case 'botify': banner('Jugador fuera', 'Le sustituye la CPU', '#ff5a6e'); break;
+    case 'bye': if (G.chars.length === 2) onlineClosed(`${roster[li] ? roster[li].look.name : 'Tu rival'} abandonó el partido.`); break;
+    default: break;
+  }
+}
+function netSend(m, li = 0) { online.send({ ...m, from: globalOf(li), ft: myFrame() }); }
 function onlineClosed(reason) {
   if (!G.online) return;
   banner('Desconectado', reason, '#ff5a6e');
@@ -189,20 +267,22 @@ function onlineClosed(reason) {
   setTimeout(() => { if (G.online) { toMenu(); menu.go('online'); } }, 2200);
 }
 function tryRematch() {
-  if (!rematch.me || !rematch.them) return;
-  if (online.S.isHost) online.start();
+  if (!rematch.me || !online.S.isHost) return;
+  const humans = online.S.players.filter(p => !p.bot && p.slot !== 0).map(p => p.slot);
+  if (humans.every(s => rematch.them.has(s))) { online.endMatch(); online.start(); }
 }
+
 // estado del giro en el vestidor (debe existir antes de crear el menú: onPane lo usa al iniciar)
 const rot = { auto: true, yaw: 0, vel: 0, drag: false, lastX: 0 };
 const menu = createMenu({
   settings,
   onChange: applySettings,
-  onPlay: startGame,
+  onPlay: () => openPrelobby('cpu'),
   blip: () => { initAudio(); SFX.blip(); },
   onLook: nameOnly => {
     applySettings(); if (!nameOnly) rebuildPlayer();
     // en una sala, el rival ve tus cambios al momento
-    if (online.playing) { online.send({ t: 'look', look: settings.look }); online.refreshVs(); }
+    online.sendLook(settings.look);
   },
   onPane: id => { menuPane = id; rot.auto = true; rot.vel = 0; $('menu').classList.toggle('posing', id === 'char'); },
 });
@@ -267,7 +347,7 @@ applyAudioSettings();
 applyQuality();
 function again() {
   if (!G.online) return startGame();
-  rematch.me = true; online.send({ t: 'rematch' });
+  rematch.me = true; netSend({ t: 'rematch' });
   $('againBtn').classList.add('waiting');
   tryRematch();
 }
@@ -283,11 +363,12 @@ $('muteBtn').onclick = () => { initAudio(); toggleMute(); refreshMute(); };
 // ---------- HUD ----------
 function refreshHUD() {
   $('s0').textContent = G.score[0]; $('s1').textContent = G.score[1];
-  $('name0').textContent = settings.look.name || 'Tú';
-  $('name1').textContent = G.online && remoteLook ? remoteLook.name + ' · Online' : CPU_LOOKS[G.diff].name + ' · ' + C.DIFFS[G.diff].name;
-  $('target').textContent = 'A ' + G.target;
-  $('srv0').classList.toggle('on', G.server === 0 && G.phase !== 'over');
-  $('srv1').classList.toggle('on', G.server === 1 && G.phase !== 'over');
+  $('name0').textContent = teamName(0) || 'Tú';
+  $('name1').textContent = teamName(1) + (G.online ? '' : roster.length === 2 ? ' · ' + C.DIFFS[G.diff].name : '');
+  $('target').textContent = G.bestOf > 1 ? `${G.games[0]}–${G.games[1]} · J${G.gameNo} · A ${G.target}` : 'A ' + G.target;
+  const st = G.chars[G.server] ? G.chars[G.server].team : -1;
+  $('srv0').classList.toggle('on', st === 0 && G.phase !== 'over');
+  $('srv1').classList.toggle('on', st === 1 && G.phase !== 'over');
 }
 function bump(id) { const e = $(id); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
 function hint(html) { $('hint').innerHTML = html; $('hint').classList.toggle('on', !!html); }
@@ -309,20 +390,68 @@ function pop3D(text, pos, cls = '') {
   setTimeout(() => d.remove(), 1100);
 }
 
+// ---------- Cuenta atrás y emotes ----------
+function showCount(n) {
+  const el = $('count');
+  el.textContent = n > 0 ? n : '¡YA!';
+  el.className = 'show' + (n === 0 ? ' go' : '');
+  void el.offsetWidth; el.classList.add('anim');
+  SFX.count(n);
+}
+const EMOTE_ICON = { dance: '♪ ♫', laugh: 'JA JA', taunt: '¡BAH!', cry: 'BUAA', love: '♥', angry: '#@%!' };
+const bubbles = [];
+function showEmote(i, id) {
+  const el = document.createElement('div');
+  el.className = 'emote-bubble e-' + id;
+  el.textContent = EMOTE_ICON[id] || '!';
+  $('pops').appendChild(el);
+  bubbles.push({ i, el, t: 2.1 });
+  SFX.emote(id);
+}
+function updateBubbles(dt) {
+  for (let k = bubbles.length - 1; k >= 0; k--) {
+    const b = bubbles[k]; b.t -= dt;
+    const c = G.chars[b.i];
+    if (b.t <= 0 || !c) { b.el.remove(); bubbles.splice(k, 1); continue; }
+    const h = views[b.i] ? 1.55 * (views[b.i].look.height || 1) : 1.55;
+    const s = toScreen(tmpV.set(c.x, h, c.z));
+    b.el.style.left = s.x + 'px'; b.el.style.top = s.y + 'px';
+    b.el.style.opacity = Math.min(1, b.t * 3);
+  }
+}
+
 // ---------- Eventos del juego ----------
 const COLS = [C.PALETTE.player, C.PALETTE.cpu];
 let tutorialHits = 0;
 onEvent((type, d) => {
-  if (type === 'match') { rebuildCpu(); fx.clearTrail(); refreshHUD(); tutorialHits = 0; return; }
+  if (type === 'match') { fx.clearTrail(); refreshHUD(); tutorialHits = 0; return; }
+  if (type === 'count') {
+    if (G.demo) return;
+    showCount(d.n);
+    return;
+  }
+  if (type === 'game') {
+    refreshHUD();
+    if (!G.demo) banner(d.winner === 0 ? '¡Juego para ti!' : '¡Juego para ' + teamName(1) + '!', `Juegos ${d.games[0]}–${d.games[1]}`, d.winner === 0 ? '#4da8ff' : '#ff6b8b');
+    return;
+  }
+  if (type === 'newgame') { refreshHUD(); if (!G.demo) setTimeout(() => banner(`Juego ${d.gameNo}`, `Juegos ${d.games[0]}–${d.games[1]}`, '#ffc93c'), 50); return; }
+  if (type === 'emote') {
+    showEmote(d.c, d.id);
+    if (G.online && !d.net && G.chars[d.c] && !G.chars[d.c].remote) netSend({ t: 'emote', id: d.id }, d.c);
+    return;
+  }
   if (type === 'serve') {
     refreshHUD();
     if (G.demo) { hint(''); return; }
+    const sc = G.chars[G.server];
     if (G.server === 0) {
       banner('Tu saque', free() ? 'Golpea la bola con la pala' : 'Haz clic para sacar', '#4da8ff');
       hint(free() ? 'Mueve la pala contra la bola con un <b>swing hacia arriba</b>'
         : 'Apunta en la mesa rival y <b>haz clic</b> para sacar');
     } else {
-      banner(G.online && remoteLook ? `Saca ${remoteLook.name}` : 'Saca la CPU', 'Prepárate', '#ff6b8b');
+      const sn = G.server === 2 ? 'tu compañero' : (roster[G.server] ? roster[G.server].look.name : 'la CPU');
+      banner(`Saca ${sn}`, sc.team === 0 ? 'Tu equipo saca' : 'Prepárate', sc.team === 0 ? '#4da8ff' : '#ff6b8b');
       hint(tutorialHits < 3 ? (free() ? 'Pon la pala en el <b>anillo</b> y haz swing al llegar la bola'
         : '<b>Haz clic</b> cuando el anillo se cierre sobre la bola') : '');
     }
@@ -337,12 +466,12 @@ onEvent((type, d) => {
   }
   if (type === 'hit') {
     // Online: mi golpe lo decido yo y se lo envío al rival (estado exacto de la bola)
-    if (G.online && d.c === 0 && !d.remote) {
-      online.send({ t: 'hit', b: ballSnapshot(), kind: G.ball.kind, rally: G.rally,
-        meta: { type: d.type, smash: d.smash, power: d.power, q: d.q, grade: d.grade, serve: d.serve, side: d.side, bh: G.chars[0].backhand } });
+    if (G.online && !d.remote && G.chars[d.c] && !G.chars[d.c].remote) {
+      netSend({ t: 'hit', b: ballSnapshot(), kind: G.ball.kind, rally: G.rally,
+        meta: { type: d.type, smash: d.smash, power: d.power, q: d.q, grade: d.grade, serve: d.serve, side: d.side, bh: G.chars[d.c].backhand } }, d.c);
     }
     if (!G.demo && d.c === 0) tutorialHits++;
-    if (!G.demo && d.c === 1 && tutorialHits < 3) hint(free() ? 'Lleva la pala al <b>anillo</b>: se pone verde cuando estás bien colocado'
+    if (!G.demo && d.team === 1 && tutorialHits < 3) hint(free() ? 'Lleva la pala al <b>anillo</b>: se pone verde cuando estás bien colocado'
       : '<b>Ahora:</b> haz clic cuando el anillo amarillo se cierre sobre la bola');
     else hint('');
     const pos = new THREE.Vector3(d.x, d.y, d.z);
@@ -373,12 +502,12 @@ onEvent((type, d) => {
     return;
   }
   if (type === 'point') {
-    if (G.online && d.auth) online.send({ t: 'pt', w: d.winner, reason: d.reason, score: d.score });
+    if (G.online && d.auth) netSend({ t: 'pt', w: d.winner, reason: d.reason, score: d.score, games: d.games });
     refreshHUD(); bump('s' + d.winner);
-    const w = G.chars[d.winner];
+    const w = G.chars[d.winner === 0 ? 0 : 1];
     fx.confetti(tmpV.set(w.x, 1.4, w.z), d.winner === 0 ? 70 : 35);
     if (!G.demo) {
-      const sub = d.winner === 0 ? 'Punto para ti' : G.online && remoteLook ? `Punto para ${remoteLook.name}` : 'Punto para la CPU';
+      const sub = d.winner === 0 ? (G.chars.length === 4 ? 'Punto para tu equipo' : 'Punto para ti') : `Punto para ${teamName(1)}`;
       banner(d.reason, sub, d.winner === 0 ? '#4da8ff' : '#ff6b8b');
       if (d.winner === 0) SFX.cheer(); else SFX.aww();
       arena.cheer(d.winner, 1);
@@ -390,10 +519,11 @@ onEvent((type, d) => {
     const won = d.winner === 0;
     won ? SFX.win() : SFX.lose();
     hint('');
-    $('overKicker').textContent = G.online && remoteLook ? `Final · Online contra ${remoteLook.name}` : `Final · CPU ${C.DIFFS[G.diff].name} · ${CONTROLS[settings.control].name}`;
+    $('overKicker').textContent = `Final · ${G.online ? 'Online' : 'CPU ' + C.DIFFS[G.diff].name} · ${G.chars.length === 4 ? '2 contra 2' : '1 contra 1'}${G.bestOf > 1 ? ' · juegos ' + G.games[0] + '–' + G.games[1] : ''}`;
     $('overTitle').textContent = won ? 'Victoria' : 'Derrota';
     $('overTitle').className = 'sheet-title ' + (won ? 'win' : 'lose');
-    $('oS0').textContent = G.score[0]; $('oS1').textContent = G.score[1];
+    const fin = G.bestOf > 1 ? G.games : G.score;
+    $('oS0').textContent = fin[0]; $('oS1').textContent = fin[1];
     $('overStats').innerHTML =
       `<div><b>${G.stats.longest}</b><span>Rally máx.</span></div>` +
       `<div><b>${G.stats.perfect[0]}</b><span>Perfectos</span></div>` +
@@ -473,13 +603,20 @@ addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'KeyM') { toggleMute(); refreshMute(); return; }
   if (e.code === 'KeyH') { $('controls').classList.toggle('off'); return; }
+  if (prelobbyOpen()) {
+    if (e.code === 'Enter') prelobbyGo(); else if (e.code === 'Escape') show('prelobby', false);
+    return;
+  }
   if (screen === 'menu') {
-    if (menuPane === 'online' && (e.code === 'Enter' || e.code === 'Space')) { online.start(); return; }
+    if (menuPane === 'online' && (e.code === 'Enter' || e.code === 'Space')) { if (online.S.active) online.start(); return; }
     menu.key(e.code); return;
   }
   if (e.code === 'Escape' || e.code === 'KeyP') { if (screen === 'game') setPause(true); else if (screen === 'pause') setPause(false); return; }
   if (screen !== 'game') return;
-  if (G.phase === 'over') { if (e.code === 'Enter') startGame(); else if (e.code === 'Escape') toMenu(); return; }
+  if (G.phase === 'over') { if (e.code === 'Enter') again(); else if (e.code === 'Escape') toMenu(); return; }
+  // Emotes: teclas 1–6
+  const em = /^Digit([1-6])$/.exec(e.code);
+  if (em) { doEmote(0, C.EMOTES[+em[1] - 1].id); return; }
   if (free()) {
     if (e.code === 'KeyQ') G.hand.rollTarget = -1;
     else if (e.code === 'KeyE') G.hand.rollTarget = 1;
@@ -648,7 +785,7 @@ function frame(now) {
 
   const b = G.ball;
   ballPos.set(b.x, b.y, b.z);
-  for (const c of G.chars) c.focus = G.phase === 'rally' && b.live && b.lastHitter === 1 - c.idx;
+  for (const c of G.chars) c.focus = G.phase === 'rally' && b.live && b.lastHitter === 1 - c.team;
   if (pose) {
     // vestidor: el frijolito se coloca y gira como en una vitrina
     const p = G.chars[0];
@@ -660,8 +797,9 @@ function frame(now) {
       if (!rot.drag) { rot.yaw += rot.vel * dt; rot.vel *= Math.exp(-6 * dt); }   // inercia suave al soltar
       views[0].root.rotation.y = Math.PI + rot.yaw;
     }
-    views[1].sync(G.chars[1], 0, ballPos, time);
-  } else views.forEach((v, i) => v.sync(G.chars[i], gdt, ballPos, time));
+    views.forEach((v, i) => { if (i > 0 && v && G.chars[i]) v.sync(G.chars[i], 0, ballPos, time); });
+  } else views.forEach((v, i) => { if (v && G.chars[i]) v.sync(G.chars[i], gdt, ballPos, time); });
+  updateBubbles(dt);
   ballView.position.copy(ballPos);
   const om = Math.hypot(b.wx, b.wy, b.wz);
   if (om > 0.5 && gdt > 0) {
@@ -693,7 +831,9 @@ function frame(now) {
   if (G.online && screen !== 'menu') {
     stTimer -= dt;
     if (stTimer <= 0) {
-      stTimer = 0.05; online.send(localState());
+      stTimer = 0.05;
+      // envío el estado de los jugadores que controla esta máquina (yo y, si soy anfitrión, los bots)
+      G.chars.forEach((c, i) => { if (!c.remote && (i === 0 || c.ai)) netSend(localState(i), i); });
       const ms = Math.round(online.S.rtt);
       $('netPing').textContent = ms ? ms + ' ms' : '— ms';
       $('netTag').className = ms > 160 ? 'bad' : ms > 90 ? 'slow' : '';
@@ -712,9 +852,8 @@ function frame(now) {
 document.addEventListener('scroll', e => { const t = e.target; if (t === document) { if (scrollX || scrollY) scrollTo(0, 0); } else if (t.id === 'menu' && t.scrollTop) t.scrollTop = 0; }, true);
 window.addEventListener('error', e => { const el = $('err'); el.textContent = 'Error: ' + e.message; el.classList.remove('hidden'); });
 setSfxEnabled(false);
-rebuildPlayer();
+roster = demoRoster(); buildViews();
 newMatch(true);
-rebuildCpu(true);
 updateCamera(1);
 requestAnimationFrame(frame);
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
@@ -722,7 +861,7 @@ window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online };
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');
 if (salaParam) { menu.go('online'); online.join(salaParam); }
-if (DEBUG === 'bot' && new URLSearchParams(location.search).get('host')) { menu.go('online'); online.host(); }
+if (DEBUG === 'bot' && new URLSearchParams(location.search).get('host')) { const pm = new URLSearchParams(location.search).get('mode'); if (pm) settings.mode = pm; menu.go('online'); online.host(); }
 if (DEBUG === 'play') {
   startGame(); G.chars[0].ai = true;
   const zq = new URLSearchParams(location.search).get('zoom');
