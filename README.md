@@ -73,7 +73,7 @@ Dos estilos de juego (*Menú → Estilo de juego*):
 
 Y cámara · View cambiar estilo · Menu pausa · cruceta y L3/R3 emotes. En los menús: cruceta/stick para moverte, A elegir, B volver, LB/RB cambiar de sección.
 
-Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
+Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · Esc pausa · M sonido · P (o H) ocultar controles.
 
 ## Dirección de arte: «Hinomaru»
 Síntesis de dos referencias elegidas entre cuatro propuestas:

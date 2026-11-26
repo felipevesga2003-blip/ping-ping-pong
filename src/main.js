@@ -833,7 +833,8 @@ addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.repeat) return;
   if (e.code === 'KeyM') { toggleMute(); refreshMute(); return; }
-  if (e.code === 'KeyH') { $('controls').classList.toggle('off'); return; }
+  // P (o H) oculta / muestra el panel de controles durante el partido
+  if (e.code === 'KeyP' || e.code === 'KeyH') { $('controls').classList.toggle('off'); return; }
   if (prelobbyOpen()) {
     if (e.code === 'Enter') prelobbyGo(); else if (e.code === 'Escape') show('prelobby', false);
     return;
@@ -843,7 +844,7 @@ addEventListener('keydown', e => {
     menu.key(e.code); return;
   }
   if (e.code === 'Tab') { e.preventDefault(); if (G.phase !== 'over') toggleStyle(); return; }
-  if (e.code === 'Escape' || e.code === 'KeyP') { if (screen === 'game') setPause(true); else if (screen === 'pause') setPause(false); return; }
+  if (e.code === 'Escape') { if (screen === 'game') setPause(true); else if (screen === 'pause') setPause(false); return; }
   if (screen !== 'game') return;
   if (G.phase === 'over') { if (e.code === 'Enter') again(); else if (e.code === 'Escape') toMenu(); return; }
   if (e.code === 'KeyF' || (!free() && (e.code === 'KeyQ' || e.code === 'KeyE'))) { usePower(); return; }

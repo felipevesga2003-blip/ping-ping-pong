@@ -86,7 +86,7 @@ export function renderControls(mode) {
     `<div class="ctl-head"><b>${padHints ? 'Mando' : 'Controles'}</b><span class="ctl-mode">${c.name}</span></div>` +
     rows.map(([k, t]) => `<div class="ctl"><kbd>${k}</kbd><span>${t}</span></div>`).join('') +
     (padHints ? `<div class="ctl-foot"><kbd>B</kbd> racha <kbd>View</kbd> estilo <kbd>Menu</kbd> pausa</div>`
-      : `<div class="ctl-foot"><kbd>F</kbd> racha <kbd>Tab</kbd> estilo <kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`);
+      : `<div class="ctl-foot"><kbd>F</kbd> racha <kbd>Tab</kbd> estilo <kbd>Esc</kbd> pausa <kbd>M</kbd> sonido <kbd>P</kbd> ocultar</div>`);
 }
 
 // Guía "Cómo jugar": pasos numerados + cómo hacer cada efecto, por estilo de control
@@ -144,7 +144,7 @@ function renderHelp(mode = helpMode) {
     <div class="steps">${h.steps.map(([t, d], i) => `<div class="step"><i class="n">${i + 1}</i><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
     <div class="fx-title">Efectos</div>
     <div class="fx-grid">${h.fx.map(([c, t, how, d]) => `<div class="fx ${c}"><b>${t}</b><kbd class="how">${how}</kbd><span>${d}</span></div>`).join('')}</div>
-    <div class="help-common"><span><kbd>Rueda</kbd> cámara · al tope, 1ª persona</span><span><kbd>F</kbd> activar racha (3, 5 o 7 puntos seguidos)</span><span><kbd>Tab</kbd> cambiar de estilo en partido</span><span><kbd>P</kbd> pausa</span><span><kbd>M</kbd> sonido</span><span><kbd>H</kbd> ocultar controles</span></div>
+    <div class="help-common"><span><kbd>Rueda</kbd> cámara · al tope, 1ª persona</span><span><kbd>F</kbd> activar racha (3, 5 o 7 puntos seguidos)</span><span><kbd>Tab</kbd> cambiar de estilo en partido</span><span><kbd>Esc</kbd> pausa</span><span><kbd>M</kbd> sonido</span><span><kbd>P</kbd> ocultar controles</span></div>
   </div>`;
 }
 
