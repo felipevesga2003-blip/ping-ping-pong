@@ -770,3 +770,6 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .st-card i { height: 58px; background-color: var(--paper-2); }
 .st-card.on i { box-shadow: inset 0 0 0 3px var(--yellow); }
 .sheet-kicker { display: table; }
+/* la cinta de controles va pegada al borde inferior, por debajo de la escalera del menú */
+.prompts { top: auto; bottom: 1.4vh; height: 36px; }
+.menu-panel { bottom: calc(1.4vh + 46px); }
