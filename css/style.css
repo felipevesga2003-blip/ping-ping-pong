@@ -760,3 +760,23 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.bad { background: #ffe1e5; border-color: var(--coral-d); }
 #toast.ok { background: #e3fff5; }
+
+/* ---------- Prelobby: escenarios ---------- */
+.sheet.wide.pl-sheet { width: min(1060px, 100%); }
+.pl-sheet .set-list { display: grid; grid-template-columns: minmax(0, 1fr) 330px; column-gap: 36px; align-items: start; }
+.pl-sheet .set-row { grid-column: 1; padding: 11px 0; }
+.pl-sheet .stage-row { grid-column: 2; grid-row: 1 / span 9; border-bottom: 0; padding-top: 11px; }
+.stage-row { flex-direction: column; align-items: stretch; gap: 10px; }
+.st-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 960px) { .pl-sheet .set-list { grid-template-columns: 1fr; } .pl-sheet .stage-row { grid-column: 1; grid-row: auto; } .st-grid { grid-template-columns: repeat(6, 1fr); } }
+.st-card { position: relative; display: flex; flex-direction: column; padding: 0; border: 3px solid rgba(255,255,255,.18); border-radius: 10px; overflow: hidden; background: var(--ink-2); cursor: pointer; transition: transform .15s var(--pop), border-color .15s; }
+.st-card i { display: block; height: 40px; }
+.st-card span { padding: 5px 4px 6px; font: italic 800 11px/1.1 var(--font); text-transform: uppercase; letter-spacing: .03em; color: #fff; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.5); }
+.st-card.on { border-color: var(--sun); box-shadow: 4px 4px 0 var(--coral); transform: translateY(-2px); }
+.st-card.on span { background: var(--sun); color: var(--ink); }
+@media (max-width: 640px) { .st-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+/* ---------- Mando ---------- */
+.gp-focus { outline: 3px solid var(--sun) !important; outline-offset: 3px; box-shadow: 0 0 0 7px rgba(255,201,60,.25) !important; border-radius: 10px; }
+#gpTag { position: fixed; right: 18px; bottom: 16px; z-index: 40; padding: 7px 14px; border-radius: 10px; background: var(--ink); color: #fff; font: 800 12px var(--font); letter-spacing: .08em; text-transform: uppercase; box-shadow: 4px 4px 0 var(--sun); opacity: 0; transition: opacity .3s; pointer-events: none; }
+#gpTag.on { opacity: 1; }

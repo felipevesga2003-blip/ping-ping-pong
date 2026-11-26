@@ -11,6 +11,12 @@ Ping pong arcade 3D con estilo cartoon, física de efecto real, frijolitos perso
 - **Contra la CPU**: 1 contra 1 o 2 contra 2 (con compañero CPU), al mejor de 1/3/5 juegos, a 5/7/11/21 puntos (prelobby).
 - **Online**: 1 contra 1 o 2 contra 2 con hasta 4 jugadores; los huecos libres los ocupa la CPU.
 
+### Escenarios
+Antes de cada partido (prelobby) eliges entre **10 sedes**, con vista previa en directo detrás del menú, o **Aleatorio**:
+Parque · Favela (morro con casitas y cometas) · Playa · Estadio Ponglímpico (la ola y pebetero) · El Infierno (lava y diablillos) ·
+Azotea de un rascacielos · Base Lunar · Polo Norte (pingüinos y auroras) · Fondo del Mar · Discoteca Neón.
+En online manda el escenario del anfitrión.
+
 ### Perfil y progreso
 - La primera vez el juego pide tu **nombre** y lo guarda (perfil con partidos, victorias y nivel).
 - **Pongcoins**: solo las gana quien gana el partido (Normal a 11 = 5; más difícil o más largo, algo más).
@@ -50,6 +56,17 @@ Dos estilos de juego (*Menú → Estilo de juego*):
 | Soltar cuando el anillo se cierre | Clic izq./der. (o Q/E): girar la pala ← / → (dirección + curva extra) |
 | Sacudir el ratón al soltar: curva | Anillo guía: verde = pala centrada con la bola |
 
+**Mando** (Xbox, PlayStation o compatible; pulsa un botón para que el navegador lo detecte):
+
+| | Clásico | Mano libre |
+|---|---|---|
+| Stick derecho | Apunta | Mueve la pala (rápido = swing) |
+| RT / A · LT / X | Liftado · cortado (mantener = potencia) | — |
+| LB / RB | Curva al soltar | Girar la pala |
+| Stick izquierdo | Moverte en modo manual (si no, también apunta / mueve la pala) | |
+
+Y cámara · View cambiar estilo · Menu pausa · cruceta y L3/R3 emotes. En los menús: cruceta/stick para moverte, A elegir, B volver, LB/RB cambiar de sección.
+
 Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
 
 ## Motor y arquitectura
@@ -65,7 +82,9 @@ src/physics.js      física pura de la bola + predicción + solver de tiros
 src/game.js         reglas, golpeo, saque, IA, sincronización online (sin render)
 src/models.js       materiales toon, piezas con contorno, mesa, bola, cielo
 src/character.js    frijolitos procedurales personalizables + rivales CPU + color rival
-src/arena.js        estadio: gradas laterales con afición instanciada por equipo
+src/arena.js        pista, gradas con afición instanciada por equipo y cambio de escenario
+src/stages.js       los 10 escenarios (cielo, luces, decorado animado)
+src/gamepad.js      lectura del mando (Gamepad API)
 src/referee.js      juez de silla con gestos y gags (señala, censura, se cae, se duerme)
 src/fx.js           estela, sombra, anillos, estrellas, confeti, retícula
 src/audio.js        sonido sintetizado (WebAudio)

@@ -4,6 +4,7 @@
 //  El anfitrión rellena los huecos libres con bots de CPU que él mismo controla.
 // =============================================================
 import { createNet, cleanCode } from './net.js';
+import { stageById } from './stages.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -146,7 +147,7 @@ export function createOnline(cb) {
     box.innerHTML = `<div class="rteam a"><h5>Equipo A</h5>${slotCard(0)}${two ? slotCard(2) : ''}</div>
       <div class="vs-badge">VS</div>
       <div class="rteam b"><h5>Equipo B</h5>${slotCard(1)}${two ? slotCard(3) : ''}</div>`;
-    $('roomMode').textContent = `${S.cfg.public ? 'Pública' : 'Privada'} · ${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target}`;
+    $('roomMode').textContent = `${S.cfg.public ? 'Pública' : 'Privada'} · ${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target} · ${stageById(S.cfg.stage).name}`;
   }
   function reset() {
     clearInterval(S.pingTimer);

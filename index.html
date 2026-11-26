@@ -415,7 +415,7 @@
 
 <!-- ================= PRELOBBY ================= -->
 <div id="prelobby" class="screen dim hidden">
-  <div class="sheet wide">
+  <div class="sheet wide pl-sheet">
     <div class="sheet-kicker" id="plKicker">Prepara el partido</div>
     <h2 class="sheet-title small" id="plTitle">Partido rápido</h2>
     <div class="set-list">
@@ -433,6 +433,8 @@
         <div class="seg2" data-k="visibility"><button data-v="private">Privada</button><button data-v="public">Pública</button></div></div>
       <div class="set-row"><div class="set-lbl"><b>Tu pala</b><span id="plPaddleDesc">Equilibrada</span></div>
         <div class="seg2" id="plPads"></div></div>
+      <div class="set-row stage-row"><div class="set-lbl"><b>Escenario</b><span id="plStageDesc">El torneo de barrio de siempre</span></div>
+        <div class="st-grid" id="plStages"></div></div>
     </div>
     <div class="btn-stack row"><button class="mbtn primary" id="plGo"><span id="plGoTxt">¡A jugar!</span><kbd>Enter</kbd></button><button class="mbtn" id="plBack"><span>Volver</span><kbd>Esc</kbd></button></div>
   </div>
@@ -473,6 +475,7 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="gpTag">A elegir · B volver · LB/RB secciones · Menu jugar</div>
 
 <div id="err" class="hidden"></div>
 <div id="fileWarn" class="screen dim hidden">

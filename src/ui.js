@@ -42,6 +42,32 @@ export const CONTROLS = {
   },
 };
 
+// Controles con mando (mapeo estándar Xbox · entre paréntesis PlayStation)
+export const PAD_CONTROLS = {
+  classic: [
+    ['Stick der.', 'Apunta en la mesa rival'],
+    ['RT / A', 'Golpe con <b class="c-top">liftado</b> (R2 / ✕)'],
+    ['LT / X', 'Golpe con <b class="c-back">cortado</b> (L2 / □)'],
+    ['Mantener', 'Carga potencia · suelta al cerrar el anillo'],
+    ['LB / RB', 'Al soltar: <b class="c-curve">curva</b> ← / →'],
+    ['Stick izq.', 'Moverte (manual) · si no, también apunta'],
+    ['Y', 'Cambiar cámara (△)'],
+    ['Cruceta', 'Emotes · L3 / R3 más emotes'],
+  ],
+  free: [
+    ['Stick der.', 'Mueve la pala · muévelo rápido = swing'],
+    ['Swing ↑ / ↓', '<b class="c-top">Liftado</b> / <b class="c-back">cortado</b>'],
+    ['Swing ↔', '<b class="c-curve">Efecto lateral</b> (curva)'],
+    ['LB / LT', 'Gira la pala ← (L1 / L2)'],
+    ['RB / RT', 'Gira la pala → (R1 / R2)'],
+    ['Stick izq.', 'Moverte (manual) · si no, también la pala'],
+    ['Y', 'Cambiar cámara (△)'],
+    ['Cruceta', 'Emotes · L3 / R3 más emotes'],
+  ],
+};
+let padHints = false;
+export function setPadHints(on) { padHints = on; }
+
 const OPTIONS = {
   diff: { values: [0, 1, 2, 3], label: v => DIFFS[v].name },
   target: { values: [5, 7, 11], label: v => `${v} puntos` },
@@ -55,11 +81,12 @@ const DIFF_DESC = [
 ];
 
 export function renderControls(mode) {
-  const c = CONTROLS[mode];
+  const c = CONTROLS[mode], rows = padHints ? PAD_CONTROLS[mode] : c.rows;
   $('controls').innerHTML =
-    `<div class="ctl-head"><b>Controles</b><span class="ctl-mode">${c.name}</span></div>` +
-    c.rows.map(([k, t]) => `<div class="ctl"><kbd>${k}</kbd><span>${t}</span></div>`).join('') +
-    `<div class="ctl-foot"><kbd>Tab</kbd> estilo <kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`;
+    `<div class="ctl-head"><b>${padHints ? 'Mando' : 'Controles'}</b><span class="ctl-mode">${c.name}</span></div>` +
+    rows.map(([k, t]) => `<div class="ctl"><kbd>${k}</kbd><span>${t}</span></div>`).join('') +
+    (padHints ? `<div class="ctl-foot"><kbd>View</kbd> estilo <kbd>Menu</kbd> pausa</div>`
+      : `<div class="ctl-foot"><kbd>Tab</kbd> estilo <kbd>P</kbd> pausa <kbd>M</kbd> sonido <kbd>H</kbd> ocultar</div>`);
 }
 
 // Guía "Cómo jugar": pasos numerados + cómo hacer cada efecto, por estilo de control
@@ -93,12 +120,27 @@ const HELP = {
     ],
   },
 };
+HELP.pad = {
+  steps: [
+    ['Conecta y pulsa', 'Enchufa un mando (Xbox, PlayStation o compatible) y <b>pulsa cualquier botón</b> para que el navegador lo detecte.'],
+    ['Menús', '<b>Cruceta / stick</b> para moverte, <b>A</b> elegir, <b>B</b> volver, <b>LB/RB</b> cambiar de sección y <b>Menu</b> para jugar.'],
+    ['Clásico', '<b>Stick derecho</b> apunta, mantén <b>RT</b> (liftado) o <b>LT</b> (cortado) y suelta a tiempo. <b>LB/RB</b> al soltar = curva.'],
+    ['Mano libre', 'El <b>stick derecho</b> es la pala: muévelo rápido hacia arriba o abajo para hacer swing. <b>LB/RB</b> giran la pala.'],
+  ],
+  fx: [
+    ['t1', 'Liftado', 'RT · swing ↑', 'Baja rápido y acelera al botar.'],
+    ['t2', 'Cortado', 'LT · swing ↓', 'Flota, frena y bota bajito.'],
+    ['t3', 'Curva', 'LB / RB', 'Se dobla hacia ese lado.'],
+    ['t4', 'Smash', 'Bola alta', 'Aparece el aviso «¡Smash!».'],
+  ],
+};
+const helpName = k => (CONTROLS[k] ? CONTROLS[k].name : 'Mando');
 let helpMode = 'classic';
 function renderHelp(mode = helpMode) {
   helpMode = mode;
   const h = HELP[mode];
   $('helpGrid').innerHTML = `<div class="help-wrap">
-    <div class="help-tabs">${Object.keys(HELP).map(k => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${CONTROLS[k].name}</button>`).join('')}</div>
+    <div class="help-tabs">${Object.keys(HELP).map(k => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${helpName(k)}</button>`).join('')}</div>
     <div class="steps">${h.steps.map(([t, d], i) => `<div class="step"><i class="n">${i + 1}</i><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
     <div class="fx-title">Efectos</div>
     <div class="fx-grid">${h.fx.map(([c, t, how, d]) => `<div class="fx ${c}"><b>${t}</b><kbd class="how">${how}</kbd><span>${d}</span></div>`).join('')}</div>

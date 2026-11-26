@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { toon, box, sphere, cyl, outlineMat } from './models.js';
 import { PALETTE } from './config.js';
 import { SKINS } from './character.js';
+import { STAGES, stageById, skyTexture, disposeTree } from './stages.js';
 
 function roundedRect(w, h, r) {
   const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
@@ -40,29 +41,25 @@ function bannerTexture(text, bg, fg, w = 1024, h = 128, reps = 1) {
   return t;
 }
 
-export function createArena(scene) {
+// lights: { hemi, sun } de main.js — cada escenario los tiñe a su gusto
+export function createArena(scene, lights) {
   // ---------- Suelo y pista ----------
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(40, 64), toon(PALETTE.ground));
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(40, 64), new THREE.MeshToonMaterial({ color: PALETTE.ground, gradientMap: toon(0xffffff).gradientMap }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-  const border = new THREE.Mesh(roundedRect(6.6, 10.6, 0.8), toon(0xffffff));
+  const border = new THREE.Mesh(roundedRect(6.6, 10.6, 0.8), new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toon(0xffffff).gradientMap }));
   border.rotation.x = -Math.PI / 2; border.position.y = 0.003; border.receiveShadow = true; scene.add(border);
-  const court = new THREE.Mesh(roundedRect(6.2, 10.2, 0.65), toon(PALETTE.court));
+  const court = new THREE.Mesh(roundedRect(6.2, 10.2, 0.65), new THREE.MeshToonMaterial({ color: PALETTE.court, gradientMap: toon(0xffffff).gradientMap }));
+  const borderGlow = new THREE.MeshBasicMaterial({ color: 0xffffff }), borderToon = border.material;
   court.rotation.x = -Math.PI / 2; court.position.y = 0.006; court.receiveShadow = true; scene.add(court);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.12, 48), toon(0xffffff));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.12, 48), border.material);
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.008; scene.add(ring);
 
   // ---------- Gradas laterales ----------
   // lado 0 = izquierda (afición del jugador), lado 1 = derecha (afición de la CPU)
   const TIERS = 4, ROWS = 12, Z0 = -4.4, Z1 = 4.4;
-  const tierCols = [0xffffff, 0xf1ecff, 0xe4dcff, 0xd6cbff];
   const barriers = [], barrierTex = [];
   for (let side = 0; side < 2; side++) {
     const sx = side === 0 ? -1 : 1;
-    for (let t = 0; t < TIERS; t++) {
-      const h = 0.38 * (t + 1);
-      const tier = box(0.95, h, Z1 - Z0 + 0.6, tierCols[t], 0.025);
-      tier.position.set(sx * (3.55 + t * 0.95), h / 2, 0); scene.add(tier);
-    }
     // valla publicitaria frente a la grada (color del equipo)
     const tex = bannerTexture('PING PING PONG', '#1a1238', '#ffffff', 1024, 128, 2);
     tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = 2.4;
@@ -71,27 +68,6 @@ export function createArena(scene) {
     panel.position.set(sx * 3.05, 0.25, 0); panel.castShadow = true; scene.add(panel);
     const cap = box(0.12, 0.06, Z1 - Z0 + 0.62, 0xffffff, 0.015); cap.position.set(sx * 3.05, 0.53, 0); scene.add(cap);
     barriers.push(cap); barrierTex.push(tex);
-  }
-
-  // Muro con cartel detrás del rival
-  const backTex = bannerTexture('TORNEO DEL PARQUE', '#ff5a6e', '#ffffff', 1536, 256, 1);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(6.4, 1.1, 0.14), new THREE.MeshToonMaterial({ map: backTex }));
-  back.position.set(0, 0.55, -5.6); back.castShadow = true; scene.add(back);
-  const backOut = new THREE.Mesh(new THREE.BoxGeometry(6.44, 1.14, 0.18), outlineMat); backOut.position.copy(back.position); scene.add(backOut);
-  for (const sx of [-1, 1]) {
-    const post = cyl(0.07, 0.07, 2.4, 0x1a1238, 0.015); post.position.set(sx * 3.3, 1.2, -5.6); scene.add(post);
-    const lamp = sphere(0.18, 0xfff3b0, 0.02, false); lamp.position.set(sx * 3.3, 2.5, -5.6); scene.add(lamp);
-  }
-  // Banderines cruzando sobre la pista
-  const pennantCols = [0xffc93c, 0xff5a6e, 0x3ee0b0, 0x3b9bff, 0xffffff, 0x8b6cff];
-  const pg = new THREE.ConeGeometry(0.09, 0.22, 3);
-  for (const z of [-3.4]) {
-    for (let i = 0; i < 22; i++) {
-      const x = -3.1 + i * (6.2 / 21);
-      const sag = 2.75 - Math.sin((i / 21) * Math.PI) * 0.45;
-      const p = new THREE.Mesh(pg, toon(pennantCols[i % pennantCols.length]));
-      p.position.set(x, sag - 0.12, z); p.rotation.x = Math.PI; scene.add(p);
-    }
   }
 
   // ---------- Público instanciado ----------
@@ -169,50 +145,60 @@ export function createArena(scene) {
       } else { sticks.setMatrixAt(i, Z); flags.setMatrixAt(i, Z); }
     }
     for (const m of [bodies, outlines, shirts, whites, pupils, capsG, sticks, flags]) m.instanceMatrix.needsUpdate = true;
-    for (const c of clouds) {
-      c.a += c.speed * dt * 0.02;
-      c.cl.position.x = Math.sin(c.a) * c.r; c.cl.position.z = Math.cos(c.a) * c.r;
-    }
+    if (stageUpdate) stageUpdate(t, dt);
   }
 
-  // ---------- Árboles y nubes ----------
-  for (let i = 0; i < 30; i++) {
-    const a = (i / 30) * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
-    const d = 12 + Math.random() * 6;
-    const tr = new THREE.Group();
-    const trunk = cyl(0.14, 0.2, 1.2, 0x9c6b43, 0.03, false); trunk.position.y = 0.6; tr.add(trunk);
-    const greens = [0x5fd36e, 0x4cc38a, 0x86e07a];
-    const c1 = sphere(0.9, greens[i % 3], 0.05, false); c1.position.y = 1.75; tr.add(c1);
-    const c2 = sphere(0.6, greens[(i + 1) % 3], 0.05, false); c2.position.set(0.5, 2.2, 0.1); tr.add(c2);
-    tr.scale.setScalar(0.8 + Math.random() * 0.6);
-    tr.position.set(Math.sin(a) * d, 0, Math.cos(a) * d);
-    scene.add(tr);
-  }
-  const clouds = [];
-  for (let i = 0; i < 9; i++) {
-    const cl = new THREE.Group();
-    const n = 4 + Math.floor(Math.random() * 3);
-    for (let j = 0; j < n; j++) {
-      const s = sphere(0.9 + Math.random() * 0.7, 0xffffff, 0.06, false);
-      s.position.set(j * 1.0 - n * 0.5, Math.random() * 0.5, (Math.random() - 0.5) * 0.8);
-      cl.add(s);
+  // ---------- Escenario intercambiable ----------
+  let stage = null, stageGroup = null, stageUpdate = null, stageCtx = {};
+  function buildTiers(g, S) {
+    for (let side = 0; side < 2; side++) {
+      const sx = side === 0 ? -1 : 1;
+      for (let t = 0; t < TIERS; t++) {
+        const h = 0.38 * (t + 1);
+        const tier = box(0.95, h, Z1 - Z0 + 0.6, S.tiers[t], 0.025);
+        tier.position.set(sx * (3.55 + t * 0.95), h / 2, 0); g.add(tier);
+      }
     }
-    const a = (i / 9) * Math.PI * 2;
-    cl.position.set(Math.sin(a) * 30, 9 + Math.random() * 5, Math.cos(a) * 30);
-    cl.lookAt(0, cl.position.y, 0);
-    scene.add(cl); clouds.push({ cl, speed: 0.1 + Math.random() * 0.15, a, r: 30 });
+    const [text, bg, fg] = S.banner;
+    const backTex = bannerTexture(text, bg, fg, 1536, 256, 1);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(6.4, 1.1, 0.14), new THREE.MeshToonMaterial({ map: backTex, gradientMap: toon(0xffffff).gradientMap }));
+    back.position.set(0, 0.55, -5.6); back.castShadow = true; g.add(back);
+    const backOut = new THREE.Mesh(new THREE.BoxGeometry(6.44, 1.14, 0.18), outlineMat); backOut.position.copy(back.position); g.add(backOut);
   }
+  function setStage(id) {
+    const S = stageById(id);
+    if (stage === S.id) return;
+    stage = S.id;
+    if (stageGroup) { scene.remove(stageGroup); disposeTree(stageGroup); }
+    stageGroup = new THREE.Group(); stageCtx = {};
+    if (scene.background && scene.background.isTexture) scene.background.dispose();
+    scene.background = skyTexture(S.sky);
+    scene.fog.color.setHex(S.fog[0]); scene.fog.near = S.fog[1]; scene.fog.far = S.fog[2];
+    lights.hemi.color.setHex(S.hemi[0]); lights.hemi.groundColor.setHex(S.hemi[1]); lights.hemi.intensity = S.hemi[2];
+    lights.sun.color.setHex(S.sun[0]); lights.sun.intensity = S.sun[1];
+    ground.visible = S.ground !== null; if (S.ground !== null) ground.material.color.setHex(S.ground);
+    border.material = S.courtGlow ? borderGlow : borderToon; border.material.color.setHex(S.court[0]);
+    court.material.color.setHex(S.court[1]);
+    ring.material = border.material;
+    buildTiers(stageGroup, S);
+    stageUpdate = S.build(stageGroup, stageCtx) || null;
+    scene.add(stageGroup);
+  }
+  setStage(STAGES[0].id);
 
   return {
     update,
     setTeams,
+    setStage,
+    get stage() { return stage; },
     // la grada del ganador salta, la del perdedor se lamenta
     cheer(winnerSide, strength = 1) {
       for (const f of fans) {
         if (f.side === winnerSide) { if (Math.random() < strength) f.hype = 1.3 + Math.random() * 0.8; }
         else if (Math.random() < strength) f.mood = 1.4 + Math.random() * 0.6;
       }
+      if (stageCtx.hype) stageCtx.hype(strength);
     },
-    hype(strength = 0.4) { for (const f of fans) if (Math.random() < strength) f.hype = 0.8 + Math.random() * 0.5; },
+    hype(strength = 0.4) { for (const f of fans) if (Math.random() < strength) f.hype = 0.8 + Math.random() * 0.5; if (stageCtx.hype) stageCtx.hype(strength * 0.6); },
   };
 }

@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import * as C from './config.js';
 import * as P from './physics.js';
 import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR } from './game.js';
-import { createSky, createTable, createBall } from './models.js';
+import { createTable, createBall } from './models.js';
+import { STAGES, stageById, resolveStage } from './stages.js';
+import { createGamepad, BTN } from './gamepad.js';
 import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDist } from './character.js';
 import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot, doEmote } from './game.js';
 import { createOnline } from './online.js';
@@ -13,7 +15,7 @@ import { createArena } from './arena.js';
 import { createReferee } from './referee.js';
 import { createFX } from './fx.js';
 import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume } from './audio.js';
-import { createMenu, renderControls, CONTROLS } from './ui.js';
+import { createMenu, renderControls, CONTROLS, setPadHints } from './ui.js';
 import { P as PR, sanitizeLook, boosts, padStats, matchReward, recordMatch, setNamed, isOwned, save as saveProgress, charLevel } from './progress.js';
 import { createWorkshop, coinHTML } from './workshop.js';
 import { createLobby } from './lobby.js';
@@ -31,11 +33,11 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 $('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = createSky();
 scene.fog = new THREE.Fog(C.PALETTE.fog, 24, 60);
 const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 150);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb9a8ff, 1.5));
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb9a8ff, 1.5);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.0);
 sun.position.set(3, 9, 5);
 sun.castShadow = true;
@@ -44,7 +46,7 @@ Object.assign(sun.shadow.camera, { left: -7.5, right: 7.5, top: 7, bottom: -7, n
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
-const arena = createArena(scene);
+const arena = createArena(scene, { hemi, sun });
 scene.add(createTable());
 const views = [null, null];   // se crean al cargar los ajustes (aspecto personalizado)
 const ballView = createBall(); scene.add(ballView);
@@ -75,10 +77,12 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
+if (settings.stage !== 'random' && !STAGES.some(s => s.id === settings.stage)) settings.stage = 'park';
+arena.setStage(settings.stage === 'random' ? 'park' : settings.stage);
 // la pala activa del Taller manda sobre el aspecto de la raqueta
 function syncPaddleLook() {
   const p = PR.paddles[PR.active];
@@ -157,6 +161,7 @@ function enterGame() {
 function startGame() {
   enterGame(); show('netTag', false);
   roster = cpuRoster(settings.mode);
+  arena.setStage(resolveStage(settings.stage, arena.stage));
   buildViews();
   newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf() });
 }
@@ -201,12 +206,27 @@ function refreshPrelobby() {
   const pt = C.PADDLES[settings.look.paddleType] || C.PADDLES.balanced, pad = PR.paddles[PR.active];
   const ups = Object.values(pad.up).reduce((a, b) => a + b, 0);
   $('plPaddleDesc').textContent = `${pad.name} · ${pt.name}${ups ? ' · ' + ups + ' mejoras' : ''}`;
+  renderStages();
   $('plPads').innerHTML = PR.paddles.map((p, i) => `<button data-i="${i}" class="${i === PR.active ? 'on' : ''}"><i class="pdot" style="background:${p.color}"></i>${p.name.replace(/[<>&"]/g, '')}</button>`).join('');
 }
 document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   settings[s.dataset.k] = b.dataset.v; applySettings(); SFX.blip(); refreshPrelobby(); menu.refresh();
 }));
+function renderStages() {
+  const card = (id, name, bg) => `<button class="st-card${settings.stage === id ? ' on' : ''}" data-st="${id}"><i style="background:${bg}"></i><span>${name}</span></button>`;
+  const hex = n => '#' + n.toString(16).padStart(6, '0');
+  $('plStages').innerHTML = STAGES.map(s => card(s.id, s.short || s.name, `linear-gradient(${s.sky[0]}, ${s.sky[1]} 45%, ${s.sky[2]} 62%, ${hex(s.ground ?? s.court[1])} 62%, ${hex(s.court[1])})`)).join('')
+    + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #ff5a6e 0 12px, #ffc93c 12px 24px, #3ee0b0 24px 36px, #4da8ff 36px 48px)');
+  const s = settings.stage === 'random' ? null : stageById(settings.stage);
+  $('plStageDesc').textContent = s ? s.name + ' · ' + s.desc : 'Uno distinto cada partido';
+}
+$('plStages').addEventListener('click', e => {
+  const b = e.target.closest('.st-card'); if (!b) return;
+  settings.stage = b.dataset.st; applySettings(); SFX.blip();
+  if (settings.stage !== 'random') arena.setStage(settings.stage);   // vista previa en directo detrás del menú
+  renderStages();
+});
 const prelobbyOpen = () => !$('prelobby').classList.contains('hidden');
 function prelobbyGo() { show('prelobby', false); if (plFor === 'online') online.host(); else startGame(); }
 $('plGo').onclick = prelobbyGo;
@@ -229,13 +249,13 @@ function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) retur
 const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
   getLook: () => playLook(),
-  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public' }),
+  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public', stage: resolveStage(settings.stage, arena.stage) }),
   onRoomInfo: r => lobby.setRoom(r),
   botLook: s => ({ ...CPU_LOOKS[(+settings.diff + s) % 4] }),
   blip: () => { initAudio(); SFX.blip(); },
   openPrelobby,
   onRoster: players => {
-    if (screen === 'menu') { roster = demoRoster(); buildViews(); }
+    if (screen === 'menu') { roster = demoRoster(); buildViews(); if (online.S.cfg && online.S.cfg.stage) arena.setStage(stageById(online.S.cfg.stage).id); }
     menu.refresh();
     const need = +(new URLSearchParams(location.search).get('need') || 2);
     if (DEBUG === 'bot' && online.S.isHost && players.length >= need && !online.S.inMatch) setTimeout(() => { if (!online.S.inMatch) online.start(); }, 600);
@@ -257,6 +277,7 @@ function startOnline(m) {
   rematch = { me: false, them: new Set() };
   $('againBtn').classList.remove('waiting');
   const cfg = m.cfg, n = cfg.mode === '2v2' ? 4 : 2, g = online.S.slot;
+  arena.setStage(stageById(cfg.stage).id);
   roster = [];
   for (let li = 0; li < n; li++) {
     const s = globalOf(li), p = m.players.find(x => x.slot === s) || { look: CPU_LOOKS[0], bot: true };
@@ -682,7 +703,7 @@ const hitP = new THREE.Vector3();
 
 const handPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 function updateAim() {
-  if (!mouse.has) return;
+  if (!mouse.has || padActive) return;
   ndc.set(mouse.x / innerWidth * 2 - 1, -(mouse.y / innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
   if (free() && screen === 'game') {
@@ -702,6 +723,7 @@ addEventListener('pointermove', e => {
   const vx = (e.clientX - mouse.x) / dtm * 1000;
   mouse.vx = mouse.vx * 0.5 + vx * 0.5;
   mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = now; mouse.has = true;
+  if (padActive && Math.abs(vx) > 60) setPadActive(false);
 });
 const app = $('app');
 app.addEventListener('pointerdown', e => {
@@ -778,6 +800,167 @@ function keyAxes() {
     x: (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0),
     z: (k('KeyS') || k('ArrowDown') ? 1 : 0) - (k('KeyW') || k('ArrowUp') ? 1 : 0),
   };
+}
+
+// ---------- Mando ----------
+const pad = createGamepad(on => { toast(on ? 'Mando conectado · pulsa <b>A</b> para elegir' : 'Mando desconectado', on ? 'ok' : 'bad'); if (!on) setPadActive(false); });
+let padActive = false, padWake = false, padCharge = false, padArmed = '', gpEl = null, navT = 0, navKey = '', lastLayer = null;
+function setPadActive(on) {
+  if (padActive === on) return;
+  padActive = on; setPadHints(on);
+  renderControls(settings.control);
+  if (!on) { setGp(null); $('gpTag').classList.remove('on'); }
+}
+function fakeKey(code) {
+  dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true }));
+  dispatchEvent(new KeyboardEvent('keyup', { code, key: code, bubbles: true }));
+}
+// capa de interfaz que tiene el foco ahora mismo (null = jugando)
+function uiLayer() {
+  if (profileOpen) return $('profile');
+  if (settingsOpen) return $('settings');
+  if (prelobbyOpen()) return $('prelobby');
+  if (screen === 'pause') return $('pause');
+  if (!$('over').classList.contains('hidden')) return $('over');
+  if (screen === 'menu') return $('menu');
+  return null;
+}
+function focusables(layer) {
+  return [...layer.querySelectorAll('button, .nav-item, input, [data-gp]')].filter(el => {
+    if (el.disabled) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight && getComputedStyle(el).visibility !== 'hidden';
+  });
+}
+function setGp(el) {
+  if (gpEl) gpEl.classList.remove('gp-focus');
+  gpEl = el;
+  if (!el) return;
+  el.classList.add('gp-focus');
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  // en el menú, pasar por una sección la abre (como en las consolas)
+  if (el.classList.contains('nav-item') && el.dataset.id !== 'play' && !el.classList.contains('active')) el.click();
+}
+function gpDefault(layer, els) {
+  return els.find(e => e.classList.contains('nav-item') && e.classList.contains('active'))
+    || els.find(e => e.classList.contains('primary')) || els[0];
+}
+function gpMove(dx, dy) {
+  const layer = uiLayer(); if (!layer) return;
+  const els = focusables(layer); if (!els.length) return;
+  if (!gpEl || !els.includes(gpEl)) { setGp(gpDefault(layer, els)); return; }
+  if (gpEl.type === 'range' && dx) { gpEl.value = +gpEl.value + dx * (+gpEl.step || 1); gpEl.dispatchEvent(new Event('input')); gpEl.dispatchEvent(new Event('change')); return; }
+  const a = gpEl.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+  let best = null, bs = Infinity;
+  for (const el of els) {
+    if (el === gpEl) continue;
+    const r = el.getBoundingClientRect();
+    // distancia desde el borde en la dirección pedida + desvío lateral penalizado
+    const along = dx > 0 ? r.left - a.right : dx < 0 ? a.left - r.right : dy > 0 ? r.top - a.bottom : a.top - r.bottom;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    if ((dx && (cx - ax) * dx <= 2) || (dy && (cy - ay) * dy <= 2)) continue;
+    if (along < -r.width) continue;
+    const perp = dx ? Math.abs(cy - ay) : Math.abs(cx - ax);
+    const s = Math.max(0, along) + perp * 2.2;
+    if (s < bs) { bs = s; best = el; }
+  }
+  if (best) { setGp(best); SFX.blip(); }
+}
+function gpActivate() {
+  const layer = uiLayer(); if (!layer) return;
+  const els = focusables(layer);
+  if (!gpEl || !els.includes(gpEl)) { setGp(gpDefault(layer, els)); return; }
+  if (gpEl.tagName === 'INPUT' && gpEl.type !== 'range') { gpEl.focus(); return; }
+  gpEl.click();
+}
+function padUI(dt) {
+  const [lx, ly, rx, ry] = pad.axes;
+  // dirección con repetición (cruceta o stick izquierdo)
+  const dir = pad.held(BTN.UP) || ly < -0.6 ? 'u' : pad.held(BTN.DOWN) || ly > 0.6 ? 'd' : pad.held(BTN.LEFT) || lx < -0.6 ? 'l' : pad.held(BTN.RIGHT) || lx > 0.6 ? 'r' : '';
+  const go = () => gpMove(dir === 'l' ? -1 : dir === 'r' ? 1 : 0, dir === 'u' ? -1 : dir === 'd' ? 1 : 0);
+  if (dir !== navKey) { navKey = dir; navT = 0.38; if (dir) go(); }
+  else if (dir && (navT -= dt) <= 0) { navT = 0.11; go(); }
+  if (pad.down(BTN.A)) gpActivate();
+  const layer = uiLayer();
+  if (pad.down(BTN.B)) {
+    if (layer === $('menu')) { const nav = document.querySelector('.nav-item.active'); if (nav && gpEl !== nav) setGp(nav); }
+    else fakeKey('Escape');
+  }
+  if (pad.down(BTN.START)) {
+    if (layer === $('prelobby')) prelobbyGo();
+    else if (layer === $('pause')) setPause(false);
+    else if (layer === $('over')) again();
+    else if (layer === $('menu')) { if (menuPane === 'online' && online.S.active) online.start(); else menu.key('Enter'); }
+    else fakeKey('Escape');
+  }
+  if (layer === $('menu') && (pad.down(BTN.LB) || pad.down(BTN.RB))) {
+    menu.key(pad.down(BTN.LB) ? 'ArrowUp' : 'ArrowDown');
+    setGp(document.querySelector('.nav-item.active'));
+  }
+  // stick derecho: girar al frijolito en el vestidor o desplazar el panel
+  if (posing() && rx) { rot.auto = false; rot.yaw += rx * dt * 3.2; }
+  else if (ry && gpEl) {
+    let p = gpEl.parentElement;
+    while (p && p !== document.body && !(p.scrollHeight > p.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+    if (p && p !== document.body) p.scrollTop += ry * dt * 700;
+  }
+}
+const ZOOMS = [0.05, 0.3, 0.55, 0.85];
+function padGame(dt) {
+  const c = G.chars[0]; if (!c || c.ai) return;
+  const [lx, ly, rx, ry] = pad.axes;
+  if (pad.down(BTN.START)) { setPause(true); return; }
+  if (G.phase === 'over') return;
+  if (pad.down(BTN.BACK)) { toggleStyle(); return; }
+  if (pad.down(BTN.Y)) {
+    const z = ZOOMS.find(v => v > camZoom + 0.02) ?? ZOOMS[0];
+    camZoom = z; settings.zoom = z.toFixed(2); applySettings();
+    const tag = $('camTag'); tag.textContent = camZoom < FP_ZOOM ? 'Cámara: 1ª persona' : `Cámara: ${Math.round(camZoom * 100)}%`; tag.classList.add('on'); camTagTimer = 1.2;
+  }
+  // emotes: cruceta y clic de los sticks
+  [BTN.UP, BTN.RIGHT, BTN.DOWN, BTN.LEFT, BTN.L3, BTN.R3].forEach((b, i) => { if (pad.down(b)) fakeKey('Digit' + (i + 1)); });
+  // movimiento manual con el stick izquierdo
+  if (!G.assist && (lx || ly)) c.keys = { x: Math.max(-1, Math.min(1, c.keys.x + lx)), z: Math.max(-1, Math.min(1, c.keys.z + ly)) };
+  const useR = Math.hypot(rx, ry) > 0.02 || !G.assist;
+  const sx = useR ? rx : lx, sy = useR ? ry : ly;
+  if (free()) {
+    // la pala va donde apunta el stick (posición absoluta): moverlo rápido = swing
+    const reach = C.FREE_REACH * c.boost.reach;
+    G.hand.tx = c.x + c.hand * 0.35 + sx * reach;
+    G.hand.ty = 1.0 - sy * reach * 0.85;
+    G.hand.rollTarget = pad.held(BTN.RB) || pad.held(BTN.RT) ? 1 : pad.held(BTN.LB) || pad.held(BTN.LT) ? -1 : 0;
+    return;
+  }
+  // Clásico: el stick coloca la diana en la mesa rival (suelto = centro)
+  const mid = (-C.HALF_L + 0.1 - 0.22) / 2, half = (C.HALF_L - 0.32) / 2;
+  const tx = sx * (C.HALF_W - 0.1), tz = mid + sy * half, k = Math.min(1, dt * 12);
+  G.aim.x += (tx - G.aim.x) * k; G.aim.z += (tz - G.aim.z) * k;
+  // la pulsación queda "armada" mientras se mantiene: si llega en la cuenta atrás, carga en cuanto se pueda
+  if (pad.down(BTN.RT) || pad.down(BTN.A)) padArmed = 'top';
+  else if (pad.down(BTN.LT) || pad.down(BTN.X)) padArmed = 'back';
+  if (padArmed && !c.charging) { startCharge(c, padArmed); if (c.charging) { padArmed = ''; padCharge = true; } }
+  if (![BTN.RT, BTN.A, BTN.LT, BTN.X].some(pad.held)) padArmed = '';
+  if (padCharge && !padArmed && ![BTN.RT, BTN.A, BTN.LT, BTN.X].some(pad.held)) {
+    padCharge = false;
+    if (c.charging) { G.flick = ((pad.held(BTN.LB) ? 1 : 0) - (pad.held(BTN.RB) ? 1 : 0)) * 60; releaseCharge(c); }
+  }
+}
+function padFrame(dt) {
+  if (!pad.poll()) return;
+  // el primer toque solo despierta el mando (no pulsa nada)
+  if (pad.touched() && !padActive) { setPadActive(true); initAudio(); lastLayer = null; padWake = true; }
+  if (padWake) { if (!pad.touched() && !pad.axes.some(Boolean) && ![0, 1, 2, 3, 4, 5, 6, 7, 8, 9].some(pad.held)) padWake = false; else { const l = uiLayer(); if (l !== lastLayer) { lastLayer = l; if (l) setGp(gpDefault(l, focusables(l))); } return; } }
+  if (!padActive) return;
+  const layer = uiLayer();
+  $('gpTag').classList.toggle('on', !!layer && !profileOpen);
+  if (layer !== lastLayer) {
+    // al abrirse una pantalla, el foco salta a su opción principal
+    lastLayer = layer;
+    if (layer) { const els = focusables(layer); if (!gpEl || !els.includes(gpEl)) setGp(gpDefault(layer, els) || null); }
+  }
+  if (layer) { padCharge = false; padArmed = ''; padUI(dt); return; }
+  setGp(null);
+  if (screen === 'game') padGame(dt);
 }
 
 // ---------- Cámara ----------
@@ -897,7 +1080,8 @@ function drawOverlay() {
     }
   }
   if (c.charging) {
-    const x = mouse.x, y = mouse.y;
+    const at = padActive ? toScreen(tmpV.set(G.aim.x, C.TABLE_H, G.aim.z)) : mouse;
+    const x = at.x, y = at.y;
     octx.beginPath(); octx.arc(x, y, 26, 0, Math.PI * 2);
     octx.strokeStyle = 'rgba(42,33,64,0.5)'; octx.lineWidth = 9; octx.stroke();
     octx.beginPath(); octx.arc(x, y, 26, -Math.PI / 2, -Math.PI / 2 + c.charge * Math.PI * 2);
@@ -914,6 +1098,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   time += dt;
   if (G.chars[0] && !G.chars[0].ai) G.chars[0].keys = keyAxes();
+  padFrame(dt);
   mouse.vx *= Math.exp(-10 * dt);
 
   let gdt = 0;
@@ -1028,7 +1213,7 @@ requestAnimationFrame(frame);
   }, wait);
 })();
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
-window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update };
+window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update, arena, renderer, openPrelobby };
 refreshCoins();
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');

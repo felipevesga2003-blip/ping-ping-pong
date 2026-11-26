@@ -17,12 +17,15 @@ const gradientMap = (() => {
 })();
 const matCache = new Map();
 export function toon(color) {
-  if (!matCache.has(color)) matCache.set(color, new THREE.MeshToonMaterial({ color, gradientMap }));
+  if (!matCache.has(color)) { const m = new THREE.MeshToonMaterial({ color, gradientMap }); m.userData.keep = true; matCache.set(color, m); }
   return matCache.get(color);
 }
 export const outlineMat = new THREE.MeshBasicMaterial({ color: PALETTE.outline, side: THREE.BackSide });
+outlineMat.userData.keep = true;
+export const GRAD = gradientMap;
 const geoCache = new Map();
-export const geo = (key, fn) => { if (!geoCache.has(key)) geoCache.set(key, fn()); return geoCache.get(key); };
+// (userData.keep: compartidos, nunca se liberan al cambiar de escenario)
+export const geo = (key, fn) => { if (!geoCache.has(key)) { const g = fn(); g.userData.keep = true; geoCache.set(key, g); } return geoCache.get(key); };
 
 // Pieza = malla toon + casco de contorno (técnica "inverted hull")
 export function part(g, og, color, shadow = true) {
