@@ -346,7 +346,7 @@ function buildOlympic(g, ctx) {
   const scrTex = canvasTex(1024, 384, (c, w, h) => {
     c.fillStyle = '#10142e'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,0.05)';
     for (let y = 0; y < h; y += 6) c.fillRect(0, y, w, 2);
-    c.font = 'italic 900 120px Archivo, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '400 150px "League Gothic", "Arial Narrow", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd166'; c.fillText('JUEGOS', w / 2, h * 0.32); c.fillStyle = '#ffffff'; c.fillText('PONGLÍMPICOS', w / 2, h * 0.7);
   });
   const scr = M(new THREE.BoxGeometry(14, 5.2, 0.5), [toon(0x2a1512), toon(0x2a1512), toon(0x2a1512), toon(0x2a1512), glow(0xffffff, { map: scrTex }), toon(0x2a1512)], 22, 19, -26, g);
@@ -826,7 +826,7 @@ function buildNeon(g, ctx) {
   for (const z of [-3, 3]) for (const sx of [-1, 1]) { const tube = M(new THREE.TorusGeometry(2.2, 0.06, 6, 40), glow(sx > 0 ? 0x3df2ff : 0xff3df2), sx * 9.5, 3.2, z, g); tube.rotation.y = Math.PI / 2; arcs.push(tube); }
   // rótulo
   const sTex = canvasTex(1024, 256, (c, w, h) => {
-    c.font = 'italic 900 170px Archivo, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '400 200px "League Gothic", "Arial Narrow", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.shadowColor = '#ff3df2'; c.shadowBlur = 30; c.lineWidth = 10; c.strokeStyle = '#ff7af6'; c.strokeText('PONG CLUB', w / 2, h / 2);
     c.shadowBlur = 0; c.fillStyle = '#ffe6fd'; c.fillText('PONG CLUB', w / 2, h / 2);
   });

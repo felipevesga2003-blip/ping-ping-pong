@@ -217,7 +217,7 @@ function renderStages() {
   const card = (id, name, bg) => `<button class="st-card${settings.stage === id ? ' on' : ''}" data-st="${id}"><i style="background:${bg}"></i><span>${name}</span></button>`;
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   $('plStages').innerHTML = STAGES.map(s => card(s.id, s.short || s.name, `linear-gradient(${s.sky[0]}, ${s.sky[1]} 45%, ${s.sky[2]} 62%, ${hex(s.ground ?? s.court[1])} 62%, ${hex(s.court[1])})`)).join('')
-    + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #E5322D 0 10px, #FFC629 10px 20px, #22100F 20px 24px)');
+    + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #D92B1C 0 10px, #FFC629 10px 20px)');
   const s = settings.stage === 'random' ? null : stageById(settings.stage);
   $('plStageDesc').textContent = s ? s.name + ' · ' + s.desc : 'Uno distinto cada partido';
 }
@@ -558,11 +558,11 @@ function hint(html) { $('hint').innerHTML = html; $('hint').classList.toggle('on
 function palAcc(hex) {
   const c = new THREE.Color(hex), hsl = {}; c.getHSL(hsl);
   const red = hsl.s > 0.3 && (hsl.h > 0.88 || hsl.h < 0.06);
-  return red ? '--acc:var(--red);--acc-ink:var(--cream)' : '--acc:var(--yellow);--acc-ink:var(--ink)';
+  return red ? '--acc:var(--red);--acc-ink:var(--paper)' : '--acc:var(--yellow);--acc-ink:var(--ink)';
 }
 function banner(text, sub = '', acc = '#ffc93c') {
   const b = $('banner');
-  b.innerHTML = `<div class="big" style="${palAcc(acc)}"><span>${text}</span></div>${sub ? `<div class="sub"><span>${sub}</span></div>` : ''}`;
+  b.innerHTML = `<div class="big" style="${palAcc(acc)};--rot:${(Math.random() * 6 - 4).toFixed(1)}deg"><span>${text}</span></div>${sub ? `<div class="sub"><span>${sub}</span></div>` : ''}`;
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 function toScreen(v) {
@@ -1099,7 +1099,7 @@ function updateCamera(dt) {
 
 // ---------- Capa 2D: anillo de timing y carga ----------
 function label(s, text, color) {
-  octx.font = 'italic 900 22px Archivo, sans-serif'; octx.textAlign = 'center';
+  octx.font = '400 30px "League Gothic", sans-serif'; octx.textAlign = 'center';
   octx.lineJoin = 'round'; octx.lineWidth = 7; octx.strokeStyle = '#22100F';
   octx.strokeText(text.toUpperCase(), s.x, s.y - 32);
   octx.fillStyle = color; octx.fillText(text.toUpperCase(), s.x, s.y - 32);
