@@ -46,8 +46,8 @@ Object.assign(sun.shadow.camera, { left: -7.5, right: 7.5, top: 7, bottom: -7, n
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
-const arena = createArena(scene, { hemi, sun });
-scene.add(createTable());
+const table = createTable(); scene.add(table);
+const arena = createArena(scene, { hemi, sun, table });
 const views = [null, null];   // se crean al cargar los ajustes (aspecto personalizado)
 const ballView = createBall(); scene.add(ballView);
 const referee = createReferee(scene, {
@@ -219,7 +219,7 @@ document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.addEventList
 function renderStages() {
   const card = (id, name, bg) => `<button class="st-card${settings.stage === id ? ' on' : ''}" data-st="${id}"><i style="background:${bg}"></i><span>${name}</span></button>`;
   const hex = n => '#' + n.toString(16).padStart(6, '0');
-  $('plStages').innerHTML = STAGES.map(s => card(s.id, s.short || s.name, `linear-gradient(${s.sky[0]}, ${s.sky[1]} 45%, ${s.sky[2]} 62%, ${hex(s.ground ?? s.court[1])} 62%, ${hex(s.court[1])})`)).join('')
+  $('plStages').innerHTML = STAGES.map(s => card(s.id, s.short || s.name, `url(assets/stages/${s.id}.jpg) center / cover, ${s.sky[1]}`)).join('')
     + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #E8301F 0 10px, #FFC629 10px 20px)');
   const s = settings.stage === 'random' ? null : stageById(settings.stage);
   $('plStageDesc').textContent = s ? s.name + ' · ' + s.desc : 'Uno distinto cada partido';
@@ -1305,7 +1305,7 @@ requestAnimationFrame(frame);
 })();
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
 if (document.fonts) document.fonts.ready.then(() => arena.redrawText());
-window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update, arena, renderer, openPrelobby, refreshStreak, usePower };
+window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update, arena, renderer, openPrelobby, refreshStreak, usePower, ballView, table };
 refreshCoins();
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');

@@ -766,3 +766,7 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .sw.auto { grid-column: span 2; width: auto; }
 .sheet, .card { overflow-x: hidden; }
 #loader::before { content: ""; position: absolute; left: -60vh; top: -70vh; width: 160vh; height: 160vh; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(17,17,17,.12) 0 1deg, transparent 1deg 5.5deg); -webkit-mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 60%); mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 60%); }
+/* miniaturas reales de cada escenario en el prelobby */
+.st-card i { height: 58px; background-color: var(--paper-2); }
+.st-card.on i { box-shadow: inset 0 0 0 3px var(--yellow); }
+.sheet-kicker { display: table; }

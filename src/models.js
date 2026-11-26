@@ -105,6 +105,10 @@ export function createTable() {
   net.position.y = TABLE_H + NET_H / 2; g.add(net);
   const tape = box(HALF_W * 2 + 0.16, 0.022, 0.012, 0xffffff, 0.006, false);
   tape.position.y = TABLE_H + NET_H; g.add(tape);
+  // materiales propios (los de toon() están compartidos): así cada escenario puede teñir su mesa
+  const topMat = top.userData.mesh.material.clone(), edgeMat = skirt.userData.mesh.material.clone();
+  top.userData.mesh.material = topMat; skirt.userData.mesh.material = edgeMat;
+  g.userData.setColors = (topHex, edgeHex) => { topMat.color.setHex(topHex); edgeMat.color.setHex(edgeHex); };
   return g;
 }
 

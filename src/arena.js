@@ -180,6 +180,7 @@ export function createArena(scene, lights) {
     ground.visible = S.ground !== null; if (S.ground !== null) ground.material.color.setHex(S.ground);
     border.material = S.courtGlow ? borderGlow : borderToon; border.material.color.setHex(S.court[0]);
     court.material.color.setHex(S.court[1]);
+    if (lights.table && S.table) lights.table.userData.setColors(S.table[0], S.table[1]);
     ring.material = border.material;
     buildTiers(stageGroup, S);
     stageUpdate = S.build(stageGroup, stageCtx) || null;
