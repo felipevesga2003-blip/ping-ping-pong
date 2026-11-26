@@ -73,6 +73,7 @@ export function newMatch(demo, opts = {}) {
   if (opts.target) G.target = opts.target;
   G.bestOf = demo ? 1 : (opts.bestOf || 1);
   G.stats = { longest: 0, smash: [0, 0], perfect: [0, 0], aces: [0, 0] };
+  G.streak = [0, 0]; G.stash = [null, null]; G.active = [null, null];
   G.ball = Object.assign(P.makeBall(), { live: false, lastHitter: -1, lastChar: -1, count: 0, net: false, sinceHit: 0, hitId: 0, kind: 'top' });
   acc = 0;
   emit('match', {});
@@ -117,6 +118,7 @@ function startServe() {
 }
 function newGame() {
   G.score = [0, 0]; G.gameNo++; G.gameEnd = false;
+  endPowers(); G.streak = [0, 0];
   G.gameFirstServer = 1 - G.gameFirstServer;
   G.firstServer = G.gameFirstServer;
   emit('newgame', { gameNo: G.gameNo, games: [...G.games] });
@@ -127,6 +129,7 @@ function newGame() {
 let acc = 0;
 export function update(dt) {
   G.time += dt;
+  for (const c of G.chars) c.fx = powerFx(c);
   for (const c of G.chars) {
     if (c.emote && (c.emote.t -= dt) <= 0) c.emote = null;
     if (c.remote) { remoteUpdate(c, dt); continue; }
@@ -170,7 +173,7 @@ export function update(dt) {
   }
 }
 
-export const freeR = c => C.FREE_HIT_R * Math.sqrt(c.pad.ctrl * c.boost.ref);
+export const freeR = c => C.FREE_HIT_R * Math.sqrt(c.pad.ctrl * c.boost.ref) * (c.fx ? c.fx.free : 1);
 const isFree = () => G.control === 'free' && G.chars[0] && !G.chars[0].ai;
 // ¿le toca a este jugador devolver la bola?
 const myTurn = c => G.ball.lastHitter === 1 - c.team && (!is2v2() || G.turn[c.team] === c.idx);
@@ -251,6 +254,7 @@ function award(w, reason, opts = {}) {
   if (opts.score) { G.score = [...opts.score]; G.games = [...opts.games]; }
   else G.score[w]++;
   if (G.rally <= 1 && G.ball.lastHitter === w) { reason = '¡ACE!'; G.stats.aces[w]++; }
+  streakPoint(w);
   for (const c of G.chars) {
     c.pending = null; c.charging = false; c.charge = 0;
     if (c.team === w) { c.celebrate = 1.6; c.mood = 1; } else c.mood = -1;
@@ -274,6 +278,67 @@ function award(w, reason, opts = {}) {
   if (payload.gameWon !== undefined) emit('game', { winner: payload.gameWon, games: [...G.games], gameNo: G.gameNo });
 }
 
+// ---------------- Rachas ----------------
+// 3, 5 y 7 puntos seguidos dan un poder (uno guardado; si llega uno mejor, lo sustituye).
+// Se activa cuando quieras (F · Q/E en clásico · B en el mando) y dura unos puntos.
+export const POWERS = {
+  dizzy:  { tier: 3, pts: 2, name: '¡Mareo!', desc: 'Al rival le da vueltas la cabeza y le baila el brazo', color: '#c77dff' },
+  ghost:  { tier: 3, pts: 2, name: 'Bola fantasma', desc: 'Tu bola se vuelve invisible a medio vuelo', color: '#cfe8ff' },
+  fire:   { tier: 5, pts: 3, name: '¡En llamas!', desc: 'Tu pala crece y la del rival encoge', color: '#ff6a2a' },
+  crazy:  { tier: 5, pts: 3, name: 'Bola loca', desc: 'Tu bola va haciendo zigzag por el aire', color: '#3ee0b0' },
+  freeze: { tier: 7, pts: 3, name: '¡Congelado!', desc: 'El rival se queda atrapado en un bloque de hielo', color: '#7bdff2' },
+  magnet: { tier: 7, pts: 3, name: 'Pala imán', desc: 'La bola busca tu pala: todo te sale perfecto', color: '#ffc93c' },
+};
+const activeId = t => (G.active && G.active[t] ? G.active[t].id : null);
+function powerFx(c) {
+  const mine = activeId(c.team), theirs = activeId(1 - c.team);
+  const f = { pad: 1, win: 1, reach: 1, free: 1, dizzy: theirs === 'dizzy', frozen: theirs === 'freeze', magnet: mine === 'magnet', fire: mine === 'fire' };
+  if (mine === 'fire') { f.pad = 1.6; f.win *= 1.35; f.reach *= 1.3; f.free *= 1.45; }
+  if (theirs === 'fire') { f.pad = 0.6; f.win *= 0.72; f.reach *= 0.78; f.free *= 0.7; }
+  if (f.dizzy) { f.win *= 0.75; f.free *= 0.85; }
+  if (f.frozen) { f.win *= 0.85; f.reach *= 0.85; }
+  if (f.magnet) { f.win *= 2; f.reach *= 1.5; f.free *= 1.6; }
+  return f;
+}
+// la CPU también sufre los poderes: falla más
+function powerMiss(c) {
+  let m = 0; const f = c.fx || {}, b = G.ball;
+  if (f.dizzy) m += 0.22;
+  if (f.frozen) m += 0.15;
+  if (b.power === 'ghost' && b.lastHitter !== c.team) m += 0.15;
+  if (b.power === 'crazy' && b.lastHitter !== c.team) m += 0.12;
+  return m;
+}
+const hasHuman = t => G.chars.some(c => c.team === t && !c.ai);
+function streakPoint(w) {
+  if (!G.streak) return;
+  G.streak[w]++; G.streak[1 - w] = 0;
+  // cada punto jugado gasta uno de duración de los poderes activos
+  for (const t of [0, 1]) {
+    const a = G.active[t];
+    if (a && --a.left <= 0) { G.active[t] = null; emit('powerEnd', { team: t, id: a.id }); }
+  }
+  if (G.demo || !hasHuman(w)) return;
+  const s = G.streak[w], tier = s === 3 ? 3 : s === 5 ? 5 : s >= 7 && (s - 7) % 2 === 0 ? 7 : 0;
+  if (!tier || (G.stash[w] && POWERS[G.stash[w]].tier >= tier)) return;
+  const pool = Object.keys(POWERS).filter(k => POWERS[k].tier === tier);
+  G.stash[w] = pool[Math.floor(Math.random() * pool.length)];
+  emit('streak', { team: w, n: s, id: G.stash[w] });
+}
+function endPowers() {
+  for (const t of [0, 1]) if (G.active && G.active[t]) { emit('powerEnd', { team: t, id: G.active[t].id }); G.active[t] = null; }
+}
+// Activa el poder guardado del equipo (o el que llega por la red). Devuelve su id o null.
+export function activatePower(team, remoteId) {
+  const id = remoteId || (G.stash && G.stash[team]);
+  if (!id || !POWERS[id] || G.demo || G.phase === 'over' || (G.active[team] && !remoteId)) return null;
+  G.stash[team] = null;
+  G.active[team] = { id, left: POWERS[id].pts };
+  for (const c of G.chars) c.fx = powerFx(c);
+  emit('power', { team, id });
+  return id;
+}
+
 // ---------------- Emotes ----------------
 export function doEmote(i, id) {
   const c = G.chars[i]; if (!c || (c.emote && c.emote.t > 0.6)) return false;
@@ -294,7 +359,7 @@ export function applyRemoteHit(m, li, rotate, lead = 0) {
   if (!r) return;
   Object.assign(b, {
     x: k * s.x, y: s.y, z: k * s.z, vx: k * s.vx, vy: s.vy, vz: k * s.vz, wx: k * s.wx, wy: s.wy, wz: k * s.wz,
-    lastHitter: r.team, lastChar: li, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: m.kind, live: true,
+    lastHitter: r.team, lastChar: li, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: m.kind, live: true, power: activeId(r.team),
   });
   G.turn[r.team] = is2v2() ? partnerOf(li) : li;
   G.pendingAward = null;
@@ -358,6 +423,7 @@ function clampZone(c) {
   c.z = az * c.sign;
 }
 function steer(c, dvx, dvz, dt, accel = 14) {
+  if (c.fx && c.fx.frozen) { dvx *= 0.3; dvz *= 0.3; accel *= 0.4; }   // congelado: casi no se mueve
   const a = accel * dt;
   c.vx += clamp(dvx - c.vx, -a, a);
   c.vz += clamp(dvz - c.vz, -a, a);
@@ -367,8 +433,8 @@ function steer(c, dvx, dvz, dt, accel = 14) {
   if (c.x !== px) c.vx = 0;
   if (c.z !== pz) c.vz = 0;
 }
-function moveTo(c, tx, tz, sp, dt) {
-  steer(c, clamp((tx - c.x) * 7, -sp, sp), clamp((tz - c.z) * 7, -sp, sp), dt);
+function moveTo(c, tx, tz, sp, dt, gain = 7) {
+  steer(c, clamp((tx - c.x) * gain, -sp, sp), clamp((tz - c.z) * gain, -sp, sp), dt);
 }
 // En dobles, quien no tiene el turno se aparta del camino de la bola
 function stepAside(c, sp, dt) {
@@ -443,7 +509,7 @@ function trySwing(c, type, power) {
   if (!myTurn(c)) return whiff(c, '¡LE TOCA A TU COMPAÑERO!');
   const pz = paddleZ(c);
   const past = (b.z - pz) * c.sign;
-  const win = C.WIN_T * c.pad.ctrl * c.boost.ref;
+  const win = C.WIN_T * c.pad.ctrl * c.boost.ref * (c.fx ? c.fx.win : 1);
   let dt, pt;
   if (past >= 0) {
     if (b.count !== 1) return whiff(c, '¡NO BOTÓ!');
@@ -455,8 +521,9 @@ function trySwing(c, type, power) {
   }
   if (dt > win) return whiff(c, '¡MUY PRONTO!');
   if (dt < -win * 0.75) return whiff(c, '¡TARDE!');
-  if (Math.abs(pt.x - c.x) > C.REACH * c.boost.reach || pt.y < TABLE_H - 0.2 || pt.y > TABLE_H + 1.15) return whiff(c, '¡NO LLEGAS!');
-  const q = 1 - Math.abs(dt) / win;
+  if (Math.abs(pt.x - c.x) > C.REACH * c.boost.reach * (c.fx ? c.fx.reach : 1) || pt.y < TABLE_H - 0.2 || pt.y > TABLE_H + 1.15) return whiff(c, '¡NO LLEGAS!');
+  let q = 1 - Math.abs(dt) / win;
+  if (c.fx && c.fx.magnet) q = Math.max(q, 0.85);
   if (dt > 0) c.pending = { type, power, q, bias: 1 };
   else hitBall(c, type, power, q, -1, false);
 }
@@ -483,6 +550,7 @@ function hitBall(c, type, power, q, bias, serve) {
     const opp = G.chars[G.turn[1 - c.team]] || G.chars[1 - c.team];
     let x = (opp.x * -c.sign > 0 ? -1 : 1) * rand(0.15, 0.5) * -c.sign;
     if (Math.random() < 0.3) x = rand(-0.5, 0.5);
+    x *= D.aim ?? 1;
     tg = { x, z: -c.sign * rand(serve ? 0.5 : 0.45, serve ? 1.15 : 1.2) };
   } else tg = { x: G.aim.x, z: G.aim.z };
 
@@ -492,7 +560,7 @@ function hitBall(c, type, power, q, bias, serve) {
   tg.x += randn() * err; tg.z += randn() * err * 0.7;
   if (!serve) tg.x += (bias > 0 ? -1 : 1) * c.hand * (1 - q) * 0.2;   // pronto = cruzado, tarde = paralelo
   // La CPU solo falla con la probabilidad de su dificultad; si no, el tiro entra
-  if (c.ai && !(Math.random() < (serve ? D.miss * 0.3 : D.miss))) {
+  if (c.ai && !(Math.random() < (serve ? D.miss * 0.3 : D.miss + powerMiss(c)))) {
     tg.x = clamp(tg.x, -C.HALF_W + 0.07, C.HALF_W - 0.07);
     tg.z = -c.sign * clamp(Math.abs(tg.z), 0.3, HALF_L - 0.07);
   }
@@ -504,6 +572,8 @@ function hitBall(c, type, power, q, bias, serve) {
   else if (type === 'top') { vh = (4.6 + 3.6 * power) * rf; top = 60 + 80 * power; }
   else { vh = (3.6 + 1.6 * power) * rf; top = -(50 + 50 * power); }
   if (!serve) vh *= (0.85 + 0.15 * q) * pad.speed * c.boost.str;
+  if (c.ai && D.pace) vh *= D.pace;
+  if (c.fx && c.fx.dizzy && !c.ai) { tg.x += Math.sin(G.time * 5) * 0.25; err += 0.08; }   // mareado: apunta torcido
   top *= pad.spin;
   const side = (c.ai ? randn() * D.side : clamp(G.flick, -110, 110)) * pad.spin;
   launch(c, start, tg, vh, top, side, q, serve, smash, type, power);
@@ -515,7 +585,8 @@ function hitBall(c, type, power, q, bias, serve) {
 function freeHit(c, d, serve) {
   const b = G.ball, h = G.hand, pad = c.pad;
   c.pending = null;
-  const q = serve ? 1 : clamp(1 - d / freeR(c), 0, 1);
+  let q = serve ? 1 : clamp(1 - d / freeR(c), 0, 1);
+  if (c.fx && c.fx.magnet) q = Math.max(q, 0.85);
   const speed = Math.hypot(h.vx, h.vy);
   const power = clamp(0.22 + speed / 5.5, 0.22, 1);
   const smash = !serve && b.y > TABLE_H + C.SMASH_H && (h.vy < -1.2 || speed > 3.2);
@@ -551,7 +622,7 @@ function launch(c, start, tg, vh, top, side, q, serve, smash, type, power) {
 
   Object.assign(b, {
     x: start.x, y: start.y, z: start.z, vx: v.vx, vy: v.vy, vz: v.vz, wx: w.x, wy: w.y, wz: w.z,
-    lastHitter: c.team, lastChar: c.idx, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: smash ? 'smash' : type, live: true,
+    lastHitter: c.team, lastChar: c.idx, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: smash ? 'smash' : type, live: true, power: activeId(c.team),
   });
   G.turn[c.team] = is2v2() ? partnerOf(c.idx) : c.idx;
   for (const o of G.chars) { o.pc = null; o.pcTimer = 0; }
@@ -578,7 +649,7 @@ function aiUpdate(c, dt) {
   } else if (G.phase === 'rally') {
     if (myTurn(c)) {
       if (b.hitId !== a.hitId) {
-        a.hitId = b.hitId; a.lead = randn() * D.timing;
+        a.hitId = b.hitId; a.lead = randn() * D.timing * (c.fx && (c.fx.dizzy || c.fx.frozen) ? 2.2 : 1);
         a.type = Math.random() < D.back ? 'back' : 'top';
         a.power = rand(D.pmin, D.pmax);
         a.timer = D.react * rand(0.8, 1.5); a.pc = null;
@@ -599,7 +670,7 @@ function aiUpdate(c, dt) {
     } else if (is2v2() && b.lastHitter === 1 - c.team) { stepAside(c, D.speed, dt); return; }
     else tx = homeX(c) * 0.5 + c.x * 0.5;
   }
-  moveTo(c, tx, tz, D.speed, dt);
+  moveTo(c, tx, tz, D.speed, dt, D.gain || 7);
 }
 function aiSwing(c) {
   c.aiS.swungId = G.ball.hitId;

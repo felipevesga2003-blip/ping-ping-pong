@@ -743,6 +743,57 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     }
   }
 
+  // ---- Poderes de racha (se crean la primera vez que hacen falta) ----
+  let pv = null;
+  function buildPowerFx() {
+    pv = { ps: 1, wasDizzy: false };
+    const add = (m) => { owned.push(m.geometry, m.material); return m; };
+    // estrellitas del mareo girando sobre la cabeza
+    pv.stars = new THREE.Group(); pv.stars.position.y = H + 0.16; root.add(pv.stars);
+    for (let i = 0; i < 4; i++) {
+      const s = add(new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffe066 : 0xffffff })));
+      s.scale.y = 0.6; pv.stars.add(s);
+    }
+    // bloque de hielo
+    pv.ice = add(new THREE.Mesh(new THREE.BoxGeometry(R * 2 + 0.34, H + 0.28, R * 2 + 0.34),
+      new THREE.MeshToonMaterial({ color: 0x9fe6ff, transparent: true, opacity: 0.42, depthWrite: false })));
+    pv.ice.position.y = (H + 0.28) / 2; root.add(pv.ice);
+    const iceOut = add(new THREE.Mesh(new THREE.BoxGeometry(R * 2 + 0.37, H + 0.31, R * 2 + 0.37), new THREE.MeshBasicMaterial({ color: 0x5ab8e0, side: THREE.BackSide, transparent: true, opacity: 0.7 })));
+    pv.ice.add(iceOut);
+    // llamas alrededor del cuerpo
+    pv.fire = new THREE.Group(); root.add(pv.fire);
+    pv.flames = [];
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 7) * Math.PI * 2 + (i >= 7 ? 0.45 : 0), hi = i >= 7;
+      const fl = add(new THREE.Mesh(new THREE.ConeGeometry(hi ? 0.06 : 0.1, hi ? 0.32 : 0.55, 8), new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? 0xffd23f : 0xff5a1f, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })));
+      fl.position.set(Math.sin(a) * (R + (hi ? 0.02 : 0.08)), hi ? H * 0.45 : 0.27, Math.cos(a) * (R + (hi ? 0.02 : 0.08))); pv.fire.add(fl); pv.flames.push({ fl, a, hi, y0: fl.position.y, ph: Math.random() * 6 });
+    }
+    // aro dorado del imán alrededor de la pala
+    pv.mag = add(new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.012, 6, 28), new THREE.MeshBasicMaterial({ color: 0xffc93c, transparent: true, opacity: 0.9 })));
+    pv.mag.position.y = 0.16; paddle.add(pv.mag);
+  }
+  function powerFx(f, dt, t) {
+    const any = f.pad !== 1 || f.dizzy || f.frozen || f.fire || f.magnet;
+    if (!pv) { if (!any) return; buildPowerFx(); }
+    pv.ps += (f.pad - pv.ps) * Math.min(1, dt * 8);
+    paddle.scale.setScalar(pv.ps);
+    pv.stars.visible = f.dizzy && !st.fp;
+    if (f.dizzy) {
+      pv.stars.rotation.y = t * 4;
+      pv.stars.children.forEach((s, i) => { const a = (i / 4) * Math.PI * 2; s.position.set(Math.cos(a) * 0.26, Math.sin(t * 6 + i) * 0.04, Math.sin(a) * 0.26); s.rotation.y = t * 8; });
+      // le baila el brazo y se tambalea
+      armPivot.rotation.z += Math.sin(t * 8.5) * 0.5; armPivot.rotation.x = Math.sin(t * 6.1) * 0.4;
+      body.rotation.z += Math.sin(t * 2.4) * 0.14;
+      pv.wasDizzy = true;
+    } else if (pv.wasDizzy) { armPivot.rotation.x = 0; pv.wasDizzy = false; }
+    pv.ice.visible = f.frozen;
+    if (f.frozen) { const k = Math.min(1, (pv.iceT = (pv.iceT || 0) + dt * 4)); pv.ice.scale.set(1, k, 1); pv.ice.position.y = (H + 0.28) * k / 2; } else pv.iceT = 0;
+    pv.fire.visible = f.fire;
+    if (f.fire) for (const q of pv.flames) { const k = 0.7 + Math.abs(Math.sin(t * 11 + q.ph)) * 0.8; q.fl.scale.set(1, k, 1); q.fl.position.y = q.y0 * (q.hi ? 1 : k) + (q.hi ? ((t * 0.9 + q.ph) % 1) * 0.35 : 0); if (q.hi) q.fl.material.opacity = 0.85 * (1 - ((t * 0.9 + q.ph) % 1)); }
+    pv.mag.visible = f.magnet;
+    if (f.magnet) { pv.mag.rotation.z = t * 3; pv.mag.scale.setScalar(1 + Math.sin(t * 9) * 0.08); }
+  }
+
   function sync(c, dt, ball, t) {
     root.position.set(c.x, 0, c.z);
     const sp = Math.hypot(c.vx, c.vz);
@@ -849,6 +900,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       }
       armPivot.rotation.y = st.armY; armPivot.rotation.z = st.armZ;
     }
+    if (c.fx) powerFx(c.fx, dt, t);
     // brazo libre: balanceo, puño arriba al celebrar, caído si está triste, gestos de emote
     const offTarget = offOverride ?? (celebrating && happy ? 2.3 + Math.sin(t * 16) * 0.3 : sad ? -0.35 : Math.sin(st.walk) * 0.35 * Math.min(1, sp) + Math.sin(t * 1.7) * 0.06);
     offPivot.rotation.z = ease(offPivot.rotation.z, offTarget, dt * 10);

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import * as C from './config.js';
 import * as P from './physics.js';
-import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR } from './game.js';
+import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR, activatePower, POWERS } from './game.js';
 import { createTable, createBall } from './models.js';
 import { STAGES, stageById, resolveStage } from './stages.js';
 import { createGamepad, BTN } from './gamepad.js';
@@ -300,6 +300,7 @@ function handleNet(m) {
     case 'hit': applyRemoteHit(m, li, rot, (online.S.rtt / 2000) * C.TIME_SCALE); break;
     case 'pt': applyRemotePoint(m, rot); break;
     case 'emote': doEmote(li, m.id, true); break;
+    case 'power': if (G.chars[li]) activatePower(G.chars[li].team, m.id); break;
     case 'rematch': rematch.them.add(m.from); tryRematch(); break;
     case 'botify': banner('Jugador fuera', 'Le sustituye la CPU', '#ff5a6e'); break;
     case 'bye': if (G.chars.length === 2) onlineClosed(`${roster[li] ? roster[li].look.name : 'Tu rival'} abandonó el partido.`); break;
@@ -510,7 +511,39 @@ function refreshMute() { $('muteBtn').classList.toggle('off', isMuted()); $('mut
 $('muteBtn').onclick = () => { initAudio(); toggleMute(); refreshMute(); };
 
 // ---------- HUD ----------
+// ---------- Rachas ----------
+const powKey = () => (padActive ? 'B' : free() ? 'F' : 'F · Q · E');
+function refreshStreak() {
+  const on = !G.demo && G.streak && (screen === 'game' || screen === 'pause');
+  const n = on ? G.streak[0] : 0, stash = on ? G.stash[0] : null;
+  show('streak', !!on && (n >= 2 || !!stash));
+  if (!on) { $('powTags').innerHTML = ''; return; }
+  $('stN').textContent = n;
+  $('streak').classList.toggle('hot', n >= 3);
+  const p = stash && POWERS[stash];
+  show('stPow', !!p);
+  if (p) {
+    $('stPow').style.setProperty('--pc', p.color);
+    $('stName').textContent = p.name; $('stKey').textContent = powKey();
+    $('stPow').classList.toggle('blocked', !!G.active[0]);
+  }
+  // poderes activos (de los dos equipos) con los puntos que les quedan
+  $('powTags').innerHTML = [0, 1].map(t => {
+    const a = G.active[t]; if (!a) return '';
+    const P0 = POWERS[a.id];
+    return `<div class="pow-tag ${t ? 'them' : 'me'}" style="--pc:${P0.color}"><b>${P0.name}</b><span>${t ? teamName(1) : (G.chars.length === 4 ? 'Tu equipo' : 'Tú')} · ${a.left} ${a.left === 1 ? 'punto' : 'puntos'}</span></div>`;
+  }).join('');
+}
+function usePower() {
+  if (screen !== 'game' || G.demo) return;
+  const id = activatePower(0);
+  if (!id) { if (G.stash[0] && G.active[0]) hint('Espera a que termine tu racha actual'); return; }
+  if (G.online) netSend({ t: 'power', id });
+}
+$('stPow').addEventListener('pointerdown', e => { e.stopPropagation(); initAudio(); usePower(); });
+
 function refreshHUD() {
+  refreshStreak();
   $('s0').textContent = G.score[0]; $('s1').textContent = G.score[1];
   $('name0').textContent = teamName(0) || 'Tú';
   $('name1').textContent = teamName(1) + (G.online ? '' : roster.length === 2 ? ' · ' + C.DIFFS[G.diff].name : '');
@@ -574,6 +607,30 @@ const COLS = [C.PALETTE.player, C.PALETTE.cpu];
 let tutorialHits = 0;
 onEvent((type, d) => {
   if (type === 'match') { fx.clearTrail(); refreshHUD(); tutorialHits = 0; return; }
+  if (type === 'streak') {
+    if (G.demo) return;
+    const p = POWERS[d.id], mine = d.team === 0;
+    // después del cartel del punto
+    setTimeout(() => {
+      if (mine) { banner(`¡Racha de ${d.n}!`, `${p.name} · pulsa ${powKey()} cuando quieras`, p.color); SFX.select(); setTimeout(() => SFX.coin(), 120); }
+      else banner(`¡${teamName(1)} va en racha!`, `${d.n} puntos seguidos · cuidado`, '#ff6b8b');
+      refreshStreak();
+    }, 1000);
+    refreshStreak();
+    return;
+  }
+  if (type === 'power') {
+    const p = POWERS[d.id], mine = d.team === 0;
+    banner(p.name, mine ? p.desc : `${teamName(1)}: ${p.desc.toLowerCase()}`, p.color);
+    SFX.smash(); setTimeout(() => SFX.select(), 150);
+    arena.hype(0.8); shake = Math.max(shake, 0.12);
+    // destello sobre quien recibe el efecto
+    const targets = G.chars.filter(c => (['dizzy', 'freeze'].includes(d.id) ? c.team !== d.team : c.team === d.team));
+    for (const c of targets) { fx.ring(tmpV.set(c.x, 1.0, c.z), p.color, 0.9, false, 0.6); fx.star(tmpV.set(c.x, 1.3, c.z), new THREE.Color(p.color).getHex(), 0.45); }
+    refreshStreak();
+    return;
+  }
+  if (type === 'powerEnd') { refreshStreak(); return; }
   if (type === 'count') {
     if (G.demo) return;
     showCount(d.n);
@@ -780,6 +837,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape' || e.code === 'KeyP') { if (screen === 'game') setPause(true); else if (screen === 'pause') setPause(false); return; }
   if (screen !== 'game') return;
   if (G.phase === 'over') { if (e.code === 'Enter') again(); else if (e.code === 'Escape') toMenu(); return; }
+  if (e.code === 'KeyF' || (!free() && (e.code === 'KeyQ' || e.code === 'KeyE'))) { usePower(); return; }
   // Emotes: teclas 1–6
   const em = /^Digit([1-6])$/.exec(e.code);
   if (em) { doEmote(0, C.EMOTES[+em[1] - 1].id); return; }
@@ -915,6 +973,7 @@ function padGame(dt) {
   if (pad.down(BTN.START)) { setPause(true); return; }
   if (G.phase === 'over') return;
   if (pad.down(BTN.BACK)) { toggleStyle(); return; }
+  if (pad.down(BTN.B)) usePower();
   if (pad.down(BTN.Y)) {
     const z = ZOOMS.find(v => v > camZoom + 0.02) ?? ZOOMS[0];
     camZoom = z; settings.zoom = z.toFixed(2); applySettings();
@@ -1096,6 +1155,7 @@ function drawOverlay() {
 // ---------- Bucle ----------
 const fadeO = [1, 1, 1, 1];
 let aura = null;   // { id: golpe, k: intensidad, color }
+let ghostBlink = -1;
 const spinQ = new THREE.Quaternion(), spinAxis = new THREE.Vector3();
 let last = performance.now();
 function frame(now) {
@@ -1132,6 +1192,11 @@ function frame(now) {
     views.forEach((v, i) => { if (i > 0 && v && G.chars[i]) v.sync(G.chars[i], 0, ballPos, time); });
   } else views.forEach((v, i) => { if (v && G.chars[i]) v.sync(G.chars[i], gdt, ballPos, time); });
   updateBubbles(dt);
+  // Bola loca: zigzag visual (máximo sobre la red, nulo en los extremos: los golpes siguen siendo justos)
+  if (b.power === 'crazy' && G.phase === 'rally' && b.count === 0 && b.lastHitter >= 0) {
+    const env = Math.max(0, 1 - Math.pow(Math.abs(b.z) / C.HALF_L, 2));
+    ballPos.x += Math.sin(b.sinceHit * 17) * 0.2 * env; ballPos.y += Math.cos(b.sinceHit * 23) * 0.05 * env;
+  }
   ballView.position.copy(ballPos);
   const om = Math.hypot(b.wx, b.wy, b.wz);
   if (om > 0.5 && gdt > 0) {
@@ -1140,9 +1205,12 @@ function frame(now) {
     ballView.quaternion.premultiply(spinQ);
   }
   const visible = (b.live || G.phase === 'serve') && !pose;
-  ballView.visible = visible;
-  const flying = visible && G.phase !== 'serve' && Math.hypot(b.vx, b.vy, b.vz) > 1.5;
-  fx.trail(ballPos, aura && aura.id === b.hitId ? aura.color : b.kind === 'smash' ? 0xff5a3d : b.kind === 'back' ? 0x6bc8ff : 0xffb020, flying);
+  // Bola fantasma: desaparece a medio vuelo y reaparece al botar en tu campo (con algún destello de pista)
+  const ghost = visible && b.power === 'ghost' && G.phase === 'rally' && b.count === 0 && b.sinceHit > 0.14;
+  if (ghost && Math.floor(b.sinceHit * 6) !== ghostBlink) { ghostBlink = Math.floor(b.sinceHit * 6); fx.ring(ballPos, 0xcfe8ff, 0.09, false, 0.25); }
+  ballView.visible = visible && !ghost;
+  const flying = visible && !ghost && G.phase !== 'serve' && Math.hypot(b.vx, b.vy, b.vz) > 1.5;
+  fx.trail(ballPos, aura && aura.id === b.hitId ? aura.color : b.power === 'fire' ? 0xff4d1f : b.power === 'crazy' ? 0x3ee0b0 : b.kind === 'smash' ? 0xff5a3d : b.kind === 'back' ? 0x6bc8ff : 0xffb020, flying);
   fx.ballShadow(ballPos);
   // aura del tiro perfecto: dura mientras la bola conserva el efecto (hasta el siguiente golpe)
   if (aura && (aura.id !== b.hitId || !visible)) aura = null;
@@ -1221,7 +1289,7 @@ requestAnimationFrame(frame);
   }, wait);
 })();
 // Hook de depuración/pruebas:  ?debug=play  → partida con la CPU controlando al jugador
-window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update, arena, renderer, openPrelobby };
+window.__ppp = { G, scene, camera, views, THREE, startGame, toMenu, online, referee, PR, lobby, toggleStyle, settings, update, arena, renderer, openPrelobby, refreshStreak, usePower };
 refreshCoins();
 // Enlace de invitación: ?sala=CÓDIGO entra directamente en la sala
 const salaParam = new URLSearchParams(location.search).get('sala');

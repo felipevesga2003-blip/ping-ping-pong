@@ -32,7 +32,8 @@ export const ZONE_X = 1.7;
 export const ZONE_Z = [HALF_L + 0.15, HALF_L + 1.5];
 
 export const DIFFS = [
-  { name: 'Fácil',   react: .22, speed: 2.3, timing: .075, pmin: .15, pmax: .45, err: .10, side: 15, back: .20, miss: .14 },
+  // Fácil: para quien empieza — reacciona tarde, se mueve suave, tira flojo y al centro, y falla a menudo
+  { name: 'Fácil',   react: .34, speed: 1.75, timing: .085, pmin: .06, pmax: .30, err: .22, side: 6, back: .12, miss: .22, aim: .45, pace: .82, gain: 3.2 },
   { name: 'Normal',  react: .14, speed: 2.8, timing: .050, pmin: .30, pmax: .70, err: .04, side: 30, back: .28, miss: .07 },
   { name: 'Difícil', react: .09, speed: 3.3, timing: .030, pmin: .45, pmax: .90, err: .02, side: 45, back: .30, miss: .04 },
   { name: 'Pro',     react: .05, speed: 3.8, timing: .018, pmin: .60, pmax: 1.0, err: .0, side: 60, back: .32, miss: .02 },

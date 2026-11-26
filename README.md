@@ -17,6 +17,12 @@ Parque · Favela (morro con casitas y cometas) · Playa · Estadio Ponglímpico 
 Azotea de un rascacielos · Base Lunar · Polo Norte (pingüinos y auroras) · Fondo del Mar · Discoteca Neón.
 En online manda el escenario del anfitrión.
 
+### Rachas
+3, 5 o 7 puntos seguidos te dan un poder que activas cuando quieras con **F** (también Q/E en clásico, **B** en el mando o tocando la tarjeta). Dura 2–3 puntos:
+- ×3: **Mareo** (al rival le da vueltas la cabeza y le baila el brazo) · **Bola fantasma** (invisible a medio vuelo)
+- ×5: **¡En llamas!** (tu pala crece, la del rival encoge) · **Bola loca** (zigzag por el aire)
+- ×7: **Congelado** (el rival, en un bloque de hielo) · **Pala imán** (todo te sale perfecto)
+
 ### Perfil y progreso
 - La primera vez el juego pide tu **nombre** y lo guarda (perfil con partidos, victorias y nivel).
 - **Pongcoins**: solo las gana quien gana el partido (Normal a 11 = 5; más difícil o más largo, algo más).
