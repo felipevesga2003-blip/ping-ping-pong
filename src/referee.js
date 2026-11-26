@@ -23,8 +23,8 @@ export function createReferee(scene, { onBubble, onSound }) {
   for (let k = 1; k <= 3; k++) { const rung = box(0.06, 0.035, 0.5, WOOD, 0.008); rung.position.set(-0.24, (SEAT_Y / 4) * k, 0); chair.add(rung); rungs.push(rung); }
   const step = box(0.3, 0.04, 0.5, WOOD, 0.008); step.position.set(-0.36, SEAT_Y * 0.45, 0); chair.add(step);
   const sign = box(0.02, 0.22, 0.42, 0xffc93c, 0.01); sign.position.set(-0.29, SEAT_Y - 0.2, 0); chair.add(sign);
-  const pole = cyl(0.015, 0.015, 0.5, NAVY, 0.006); pole.position.set(0.28, SEAT_Y + 0.6, 0.25); chair.add(pole);
-  const umbrella = cyl(0.02, 0.38, 0.14, 0xff5a6e, 0.012); umbrella.position.set(0.28, SEAT_Y + 0.88, 0.25); chair.add(umbrella);
+  const pole = cyl(0.015, 0.015, 1.1, NAVY, 0.006); pole.position.set(0.28, SEAT_Y + 0.98, 0.25); chair.add(pole);
+  const umbrella = cyl(0.02, 0.38, 0.14, 0xff5a6e, 0.012); umbrella.position.set(0.28, SEAT_Y + 1.56, 0.25); chair.add(umbrella);
 
   // ---- El juez (frijolito con camiseta de rayas) ----
   const holder = new THREE.Group(); holder.position.set(0, SEAT_Y + 0.03, 0); holder.rotation.y = -Math.PI / 2; chair.add(holder);
