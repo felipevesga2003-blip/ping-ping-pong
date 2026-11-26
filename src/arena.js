@@ -193,6 +193,7 @@ export function createArena(scene, lights) {
     court.material.color.setHex(S.court[1]);
     if (lights.table && S.table) lights.table.userData.setColors(S.table[0], S.table[1]);
     ring.material = border.material;
+    if (lights.onStage) lights.onStage(S.id);
     buildTiers(stageGroup, S);
     stageUpdate = S.build(stageGroup, stageCtx) || null;
     props = buildFanProps(stageGroup, S.id, fans); props.recolor(teamCols);

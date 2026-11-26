@@ -47,13 +47,15 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
 const table = createTable(); scene.add(table);
-const arena = createArena(scene, { hemi, sun, table });
+let onStageHook = null;   // el juez se viste según el escenario (se conecta al crearlo)
+const arena = createArena(scene, { hemi, sun, table, onStage: id => onStageHook && onStageHook(id) });
 const views = [null, null];   // se crean al cargar los ajustes (aspecto personalizado)
 const ballView = createBall(); scene.add(ballView);
 const referee = createReferee(scene, {
   onBubble: (text, pos) => { if (screen !== 'menu') pop3D(text, pos, 'ref'); },
   onSound: s => { if (screen !== 'menu' && SFX[s]) SFX[s](); },
 });
+onStageHook = id => referee.setStage(id); referee.setStage(arena.stage);
 const fx = createFX(scene);
 
 const overlay = $('overlay'), octx = overlay.getContext('2d');

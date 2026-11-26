@@ -135,6 +135,7 @@ const AMB = {
   moon: () => { tone(58, 3, 'sine', 0.025); if (Math.random() < 0.4) tone(1250, 0.06, 'square', 0.01, 0, rnd(0.5, 2.5)); return 2.8; },
   polar: () => { noise(3.6, 0.035, rnd(600, 1100), { attack: 1.4, q: 1.4 }); return rnd(2.6, 3.6); },
   sea: () => { for (let k = 0; k < 3; k++) { const d = rnd(0, 1.2), f = rnd(280, 520); tone(f, 0.09, 'sine', 0.025, f * 2.4, d); } noise(2.5, 0.02, 300, { attack: 1, type: 'lowpass' }); return rnd(1.6, 2.4); },
+  colosseum: () => { noise(3, 0.03, 850, { attack: 0.9, q: 0.4 }); if (Math.random() < 0.3) { [262, 330, 392, 523].forEach((f, k) => tone(f, 0.32, 'sawtooth', 0.016, 0, 0.6 + k * 0.22)); } return rnd(2.6, 3.6); },
   neon: () => { const b = 60 / 124; for (let k = 0; k < 4; k++) { tone(110, 0.16, 'sine', 0.09, 40, k * b); noise(0.03, 0.025, 8000, { delay: k * b + b / 2 }); } return b * 4; },
 };
 export function setAmbient(id) {

@@ -889,6 +889,180 @@ function buildNeon(g, ctx) {
 }
 
 // =============================================================
+//  11 · COLISEO ROMANO: anillo elíptico de arcos con su tramo
+//  derrumbado, graderío lleno, velario, palco imperial, braseros,
+//  estandartes, estatuas de mármol y la puerta de los gladiadores
+// =============================================================
+function arcadeTexture(rows, { stone = '#d9c7a2', w = 512, h = 256, attic = false } = {}) {
+  return canvasTex(w, h, (c, W, Hh) => {
+    c.fillStyle = stone; c.fillRect(0, 0, W, Hh);
+    // vetas de travertino
+    c.globalAlpha = 0.18; c.strokeStyle = '#8a7652';
+    for (let y = 6; y < Hh; y += 9) { c.beginPath(); c.moveTo(0, y + Math.random() * 3); c.lineTo(W, y + Math.random() * 3); c.stroke(); }
+    c.globalAlpha = 1;
+    const rh = Hh / rows, n = 4;
+    for (let r = 0; r < rows; r++) {
+      const y0 = r * rh;
+      c.fillStyle = 'rgba(80,60,35,.35)'; c.fillRect(0, y0 + rh - 7, W, 7);             // cornisa
+      c.fillStyle = 'rgba(255,245,220,.5)'; c.fillRect(0, y0 + rh - 9, W, 2);
+      for (let k = 0; k < n; k++) {
+        const cx = (k + 0.5) * (W / n), aw = (W / n) * 0.56;
+        if (attic && r === 0) {                                                          // ático: ventanas cuadradas
+          c.fillStyle = '#3a2a1c'; c.fillRect(cx - aw * 0.18, y0 + rh * 0.35, aw * 0.36, rh * 0.3); continue;
+        }
+        // medias columnas con capitel
+        const px = k * (W / n);
+        c.fillStyle = 'rgba(255,248,228,.55)'; c.fillRect(px - 7, y0 + 8, 14, rh - 16);
+        c.fillStyle = 'rgba(90,70,45,.35)'; c.fillRect(px + 4, y0 + 8, 3, rh - 16);
+        c.fillStyle = 'rgba(255,248,228,.7)'; c.fillRect(px - 11, y0 + 8, 22, 6);
+        // arco
+        const top = y0 + rh * 0.22, bot = y0 + rh - 9;
+        c.fillStyle = '#2e2116';
+        c.beginPath(); c.moveTo(cx - aw / 2, bot); c.lineTo(cx - aw / 2, top + aw / 2); c.arc(cx, top + aw / 2, aw / 2, Math.PI, 0); c.lineTo(cx + aw / 2, bot); c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(255,245,220,.55)'; c.lineWidth = 3; c.beginPath(); c.arc(cx, top + aw / 2, aw / 2 + 3, Math.PI, 0); c.stroke();
+        c.fillStyle = 'rgba(255,190,110,.10)'; c.fillRect(cx - aw / 2 + 4, top + aw / 2, aw * 0.3, bot - top - aw / 2);
+      }
+    }
+  });
+}
+function buildColosseum(g, ctx) {
+  const ring = new THREE.Group(); ring.scale.x = 1.22; g.add(ring);         // planta elíptica
+  // ---- graderío escalonado (cavea) ----
+  const pts = [new THREE.Vector2(14, 2.6)];
+  const RISE = 0.82, T0 = 2.6 + 11 * RISE;             // altura de la última grada (base del muro exterior)
+  for (let k = 0; k < 11; k++) { const r = 14 + k * 1.55, y = 2.6 + k * RISE; pts.push(new THREE.Vector2(r, y)); pts.push(new THREE.Vector2(r + 1.55, y)); }
+  pts.push(new THREE.Vector2(31, T0)); pts.push(new THREE.Vector2(31, 0));
+  const cavea = M(new THREE.LatheGeometry(pts.reverse(), 120), ownToon(0xd7c6a2, { side: THREE.DoubleSide }), 0, 0, 0, ring); cavea.receiveShadow = true;
+  // ---- podio con nichos y la puerta de los gladiadores ----
+  const podTex = arcadeTexture(1, { stone: '#cdb98f' }); podTex.wrapS = THREE.RepeatWrapping; podTex.repeat.set(26, 1);
+  M(new THREE.CylinderGeometry(14, 14, 2.6, 120, 1, true), ownToon(0xffffff, { map: podTex, side: THREE.DoubleSide }), 0, 1.3, 0, ring);
+  M(new THREE.TorusGeometry(14, 0.12, 6, 120), toon(0xeee2c4), 0, 2.62, 0, ring).rotation.x = Math.PI / 2;
+  const gate = new THREE.Group(); gate.position.set(0, 0, -13.85); g.add(gate);
+  const gShape = new THREE.Shape(); gShape.moveTo(-1.3, 0); gShape.lineTo(-1.3, 1.6); gShape.absarc(0, 1.6, 1.3, Math.PI, 0, true); gShape.lineTo(1.3, 0); gShape.lineTo(-1.3, 0);
+  M(new THREE.ShapeGeometry(gShape), toon(0x2a1c12), 0, 0, 0.02, gate);
+  for (let k = -3; k <= 3; k++) M(new THREE.BoxGeometry(0.3, 2.4, 0.06), toon(k % 2 ? 0x6b4423 : 0x7a5030), k * 0.34, 1.2, 0.06, gate);
+  for (const y of [0.5, 1.6]) M(new THREE.BoxGeometry(2.3, 0.1, 0.08), toon(0x3a3a46), 0, y, 0.1, gate);
+  M(new THREE.TorusGeometry(1.42, 0.13, 8, 24, Math.PI), toon(0xeee2c4), 0, 1.6, 0.05, gate);
+  // ---- muro exterior: tres pisos de arcos + ático, con el tramo derrumbado ----
+  const wallTex = arcadeTexture(3, { stone: '#d9c7a2', h: 384 }); wallTex.wrapS = THREE.RepeatWrapping; wallTex.repeat.set(30, 1);
+  const atticTex = arcadeTexture(1, { stone: '#d2bf98', h: 128, attic: true }); atticTex.wrapS = THREE.RepeatWrapping; atticTex.repeat.set(30, 1);
+  const gap0 = Math.PI + 0.15, gapL = 0.85;                 // hueco del derrumbe (al fondo, a la izquierda)
+  const wallMat = ownToon(0xffffff, { map: wallTex, side: THREE.DoubleSide }), atticMat = ownToon(0xffffff, { map: atticTex, side: THREE.DoubleSide });
+  M(new THREE.CylinderGeometry(31.2, 31.2, 13, 140, 1, true, gap0 + gapL, TAU - gapL), wallMat, 0, T0 + 6.5, 0, ring);
+  M(new THREE.CylinderGeometry(31.2, 31.2, 4, 140, 1, true, gap0 + gapL, TAU - gapL), atticMat, 0, T0 + 15, 0, ring);
+  M(new THREE.TorusGeometry(31.25, 0.25, 6, 140, TAU - gapL), toon(0xeee2c4), 0, T0 + 17.1, 0, ring).rotation.set(Math.PI / 2, 0, -(gap0 + gapL) + Math.PI / 2);
+  // derrumbe: escalones de muro cada vez más bajos, con bloques caídos
+  const steps = [11, 8.5, 6, 3.5, 2, 4.5, 7.5];
+  steps.forEach((hh, k) => {
+    const t0 = gap0 + (k / steps.length) * gapL;
+    const seg = M(new THREE.CylinderGeometry(31.2, 31.2, hh, 10, 1, true, t0, gapL / steps.length + 0.004), wallMat, 0, T0 + hh / 2, 0, ring);
+    seg.material = wallMat;
+  });
+  const rubble = [];
+  for (let i = 0; i < 26; i++) { const a = gap0 + Math.random() * gapL, d = rnd(27, 31), s = rnd(0.5, 1.4); rubble.push({ x: Math.sin(a) * d, y: T0 + s * 0.4, z: Math.cos(a) * d, sx: s * 1.4, sy: s, sz: s, ry: rnd(0, 3), rx: rnd(-0.3, 0.3), c: pick(['#d9c7a2', '#cbb68e', '#e3d3b0']) }); }
+  inst(UNIT_BOX(), WHITE(), rubble, ring, { outline: 0.02 });
+  // ---- velario: mástiles en lo alto y el toldo sobre la mitad del fondo ----
+  for (let k = 0; k < 48; k++) {
+    const a = (k / 48) * TAU; if (a > gap0 && a < gap0 + gapL) continue;
+    M(new THREE.CylinderGeometry(0.08, 0.1, 4.5, 6), toon(0x7a5030), Math.sin(a) * 31.3, T0 + 19.3, Math.cos(a) * 31.3, ring);
+  }
+  const velTex = canvasTex(512, 64, (c, W, Hh) => { for (let i = 0; i < 16; i++) { c.fillStyle = i % 2 ? '#f3e6c8' : '#c8402c'; c.fillRect(i * W / 16, 0, W / 16, Hh); } c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(0, Hh - 8, W, 8); });
+  velTex.wrapS = THREE.RepeatWrapping; velTex.repeat.set(3, 1);
+  const vel = M(new THREE.CylinderGeometry(31, 17, 6, 80, 1, true, Math.PI * 0.45, Math.PI * 1.1), ownToon(0xffffff, { map: velTex, side: THREE.DoubleSide }), 0, T0 + 17.5, 0, ring);
+  const ropes = [];
+  for (let k = 0; k < 22; k++) {
+    const a = Math.PI * 0.45 + (k / 21) * Math.PI * 1.1;
+    const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(Math.sin(a) * 31.3, T0 + 21.5, Math.cos(a) * 31.3), new THREE.Vector3(Math.sin(a) * 17, T0 + 14.5, Math.cos(a) * 17)]);
+    ring.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x5a4020 })));
+  }
+  // ---- público con togas en el graderío (con su ola) ----
+  const crowd = [];
+  const CC = ['#f4efe3', '#efe3c6', '#f4efe3', '#c94a3a', '#7a3b8c', '#d9a03a', '#ffffff', '#b8442e', '#e8d9b5'];
+  for (let k = 0; k < 11; k++) {
+    const r = 14.8 + k * 1.55, y = 2.6 + k * RISE + 0.35, n = Math.floor((TAU * r) / 0.78);
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU + rnd(-0.01, 0.01); if (Math.random() < 0.08) continue; crowd.push({ a, y, x: Math.sin(a) * r * 1.22, z: Math.cos(a) * r, c: pick(CC), s: rnd(0.3, 0.37) }); }
+  }
+  const crowdM = inst(new THREE.SphereGeometry(1, 8, 6), WHITE(), crowd, g);
+  // ---- palco imperial (pulvinar) ----
+  const pul = new THREE.Group(); pul.position.set(0, 2.6 + 2 * RISE + 0.2, -17.2); g.add(pul);
+  const plat = box(6, 0.4, 3, 0xe9dcbc, 0.03); pul.add(plat);
+  for (const x of [-2.6, -1.3, 0, 1.3, 2.6]) { const col = cyl(0.17, 0.2, 3, 0xf3ead2, 0.02); col.position.set(x, 1.7, 1.2); pul.add(col); const cap = box(0.5, 0.15, 0.5, 0xe9dcbc, 0.01); cap.position.set(x, 3.25, 1.2); pul.add(cap); }
+  const archi = box(6.4, 0.4, 3.2, 0xe9dcbc, 0.03); archi.position.y = 3.5; pul.add(archi);
+  const ped = new THREE.Shape(); ped.moveTo(-3.3, 0); ped.lineTo(0, 1.2); ped.lineTo(3.3, 0); ped.lineTo(-3.3, 0);
+  M(new THREE.ShapeGeometry(ped), toon(0xf3ead2), 0, 3.7, 1.62, pul);
+  const drape = M(new THREE.PlaneGeometry(5.6, 1.6, 12, 1), ownToon(0x6b2a8c, { side: THREE.DoubleSide }), 0, -0.6, 1.52, pul);
+  const drapeBase = drape.geometry.attributes.position.array.slice();
+  M(new THREE.BoxGeometry(5.6, 0.12, 0.05), toon(0xf2b632), 0, 0.15, 1.53, pul);
+  // águila dorada
+  const eagle = new THREE.Group(); eagle.position.set(0, 5.25, 1.6); pul.add(eagle);
+  M(new THREE.SphereGeometry(0.28, 12, 8), toon(0xf2b632), 0, 0, 0, eagle).scale.set(0.8, 1, 0.8);
+  for (const s of [-1, 1]) { const w = M(new THREE.BoxGeometry(0.9, 0.35, 0.06), toon(0xf2b632), s * 0.5, 0.15, 0, eagle); w.rotation.z = s * 0.45; }
+  M(new THREE.ConeGeometry(0.08, 0.2, 6), toon(0xe08a1a), 0, 0.25, 0.25, eagle).rotation.x = Math.PI / 2;
+  // ---- arena: braseros, estandartes, estatuas y escudos ----
+  const flames = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + Math.PI / 6, p = ring2(a);
+    const br = new THREE.Group(); br.position.copy(p); g.add(br);
+    for (let k = 0; k < 3; k++) { const l = cyl(0.03, 0.03, 1.2, 0x3a2a1c, 0.01, false); const la = k * TAU / 3; l.position.set(Math.sin(la) * 0.22, 0.55, Math.cos(la) * 0.22); l.rotation.set(Math.cos(la) * 0.25, 0, -Math.sin(la) * 0.25); br.add(l); }
+    const bowl = M(new THREE.CylinderGeometry(0.42, 0.22, 0.28, 14), toon(0xb07a2a), 0, 1.2, 0, br);
+    const f1 = M(new THREE.ConeGeometry(0.32, 0.9, 10), glow(0xff6a1f), 0, 1.75, 0, br);
+    const f2 = M(new THREE.ConeGeometry(0.18, 0.6, 8), glow(0xffd23f), 0, 1.6, 0, br);
+    flames.push({ f1, f2, ph: i });
+  }
+  const banTex = canvasTex(128, 256, (c, W, Hh) => {
+    c.fillStyle = '#b8261c'; c.fillRect(0, 0, W, Hh); c.strokeStyle = '#f2b632'; c.lineWidth = 8; c.strokeRect(8, 8, W - 16, Hh - 40);
+    c.fillStyle = '#f2b632'; c.font = '700 34px Georgia, serif'; c.textAlign = 'center'; c.fillText('SPQR', W / 2, Hh * 0.45);
+    c.beginPath(); c.arc(W / 2, Hh * 0.65, 18, 0, TAU); c.fill();
+    for (let x = 6; x < W; x += 14) { c.fillRect(x, Hh - 30, 6, 26); }
+  });
+  const banners = [];
+  for (const [x, z] of [[-9.5, -9], [9.5, -9], [-11, 0.5], [11, 0.5], [-9.5, 9], [9.5, 9]]) {
+    const pole = cyl(0.05, 0.05, 4.6, 0x6b4423, 0.012); pole.position.set(x, 2.3, z); g.add(pole);
+    const bar = cyl(0.03, 0.03, 1.3, 0x6b4423, 0.008); bar.rotation.z = Math.PI / 2; bar.position.set(x, 4.3, z); g.add(bar);
+    const tip = sphere(0.12, 0xf2b632, 0.01); tip.position.set(x, 4.7, z); g.add(tip);
+    const b = M(new THREE.PlaneGeometry(1.15, 2.1), ownToon(0xffffff, { map: banTex, side: THREE.DoubleSide }), x, 3.2, z, g);
+    b.lookAt(0, 3.2, z * 0.2); banners.push({ b, ph: x + z });
+  }
+  // estatuas de mármol (frijolitos con toga) en pedestales
+  for (const [x, z, ry] of [[-8.5, -11.5, 0.5], [8.5, -11.5, -0.5], [-12.5, -5, 1.2], [12.5, -5, -1.2]]) {
+    const ped2 = box(1, 1.3, 1, 0xe6dccb, 0.02); ped2.position.set(x, 0.65, z); g.add(ped2);
+    const st = miniBean(0xf2efe8, 2.2); st.position.set(x, 1.3, z); st.rotation.y = ry; g.add(st);
+    const toga = M(new THREE.TorusGeometry(0.24, 0.05, 6, 18), toon(0xe9e4da), 0, 0.42, 0, st); toga.rotation.set(Math.PI / 2, 0.6, 0);
+    const lau = M(new THREE.TorusGeometry(0.17, 0.03, 6, 18), toon(0xd9cfbd), 0, 0.62, 0, st); lau.rotation.x = Math.PI / 2;
+  }
+  // escudos apoyados en el podio
+  for (let i = 0; i < 8; i++) {
+    const a = rnd(0, TAU), p = new THREE.Vector3(Math.sin(a) * 16.6, 0, Math.cos(a) * 13.6);
+    if (Math.abs(p.x) < 8 && p.z > -6) continue;
+    const sh = new THREE.Group(); sh.position.set(p.x, 0.55, p.z); sh.lookAt(0, 0.55, 0); sh.rotateX(-0.25); g.add(sh);
+    M(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 20), toon(i % 2 ? 0xb8261c : 0xc9a24a), 0, 0, 0, sh).rotation.x = Math.PI / 2;
+    M(new THREE.SphereGeometry(0.14, 10, 8), toon(0xf2b632), 0, 0, 0.06, sh).scale.z = 0.5;
+  }
+  let waveBoost = 0;
+  ctx.hype = s => { waveBoost = Math.max(waveBoost, 2.5 * s); };
+  return (t, dt) => {
+    waveBoost = Math.max(0, waveBoost - dt);
+    const wa = t * 0.8;
+    for (let i = 0; i < crowd.length; i++) {
+      const c = crowd[i];
+      let d = ((c.a - wa) % TAU + TAU) % TAU; d = Math.min(d, TAU - d);
+      const up = Math.max(0, 1 - d * 2.4) * 0.8 + (waveBoost > 0 ? Math.abs(Math.sin(t * 8 + i)) * 0.35 : 0);
+      _o.position.set(c.x, c.y + up, c.z); _o.rotation.set(0, 0, 0); _o.scale.set(c.s, c.s * (1 + up * 0.4), c.s); _o.updateMatrix();
+      crowdM.setMatrixAt(i, _o.matrix);
+    }
+    crowdM.instanceMatrix.needsUpdate = true;
+    for (const f of flames) { const k = 1 + Math.sin(t * 11 + f.ph) * 0.15 + Math.sin(t * 6.3 + f.ph * 2) * 0.1 + waveBoost * 0.2; f.f1.scale.set(1, k, 1); f.f1.position.y = 1.35 + 0.45 * k; f.f2.scale.set(1, k, 1); f.f2.position.y = 1.35 + 0.3 * k; }
+    for (const b of banners) b.b.rotation.z = Math.sin(t * 1.4 + b.ph) * 0.04;
+    const pa = drape.geometry.attributes.position;
+    for (let i = 0; i < pa.count; i++) { const x = drapeBase[i * 3]; pa.setZ(i, Math.sin(x * 2 + t * 1.6) * 0.06); }
+    pa.needsUpdate = true;
+    vel.rotation.y = Math.sin(t * 0.3) * 0.004;
+  };
+}
+// posición sobre la elipse interior de la arena (para braseros)
+function ring2(a) { return new THREE.Vector3(Math.sin(a) * 12.2, 0, Math.cos(a) * 10.5); }
+
+// =============================================================
 //  CATÁLOGO
 //  sky [arriba, medio, horizonte] · fog [color, cerca, lejos] · hemi [cielo, suelo, int.]
 //  sun [color, int.] · ground (null = sin suelo) · court [borde, pista] · tiers (gradas)
@@ -924,6 +1098,9 @@ export const STAGES = [
   { id: 'neon', name: 'Discoteca Neón', short: 'Discoteca', desc: 'Pista de baile que se ilumina, láseres y DJ', table: [0xd81b9a, 0x8a0f63], banner: ['PONG CLUB', '#14052a', '#ff3df2'],
     sky: ['#07010f', '#1c0738', '#3a0d5c'], fog: [0x1a0835, 20, 60], hemi: [0xb09bff, 0x220033, 1.1], sun: [0xe0c8ff, 1.5],
     ground: 0x150c28, court: [0xff3df2, 0x241040], courtGlow: true, tiers: [0x3a2a5c, 0x33244f, 0x2b1f44, 0x241a3a], build: buildNeon },
+  { id: 'colosseum', name: 'Coliseo Romano', short: 'Coliseo', table: [0x5a2a7a, 0x3a1a52], desc: 'Juegos en la arena ante el César y cincuenta mil romanos', banner: ['LVDI PONGLIANI', '#7a1f16', '#f2b632'],
+    sky: ['#4f8fdc', '#f3d39c', '#ffe7c0'], fog: [0xf2d8ac, 55, 150], hemi: [0xfff1dc, 0xb08a5a, 1.45], sun: [0xffe3b8, 2.2],
+    ground: 0xe1c28a, court: [0xefe6d2, 0xc9a266], tiers: [0xe6d9bc, 0xd9cba9, 0xcdbd98, 0xc0b088], build: buildColosseum },
 ];
 export const stageById = id => STAGES.find(s => s.id === id) || STAGES[0];
 // 'random' → uno al azar (distinto del actual si se puede)

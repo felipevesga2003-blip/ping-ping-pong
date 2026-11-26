@@ -22,14 +22,14 @@ export const EARS = [['none', 'Ninguna'], ['cat', 'Gato'], ['bear', 'Oso'], ['bu
 export const SHIRTS = [['tee', 'Camiseta'], ['gi', 'Gi marcial'], ['spacesuit', 'Traje espacial'], ['tank', 'Tirantes'], ['hoodie', 'Sudadera'], ['polo', 'Polo'], ['hawaii', 'Hawaiana'], ['stripes', 'Rayas'],
   ['flannel', 'Cuadros'], ['track', 'Chándal'], ['leather', 'Cuero'], ['suit', 'Traje'], ['overalls', 'Peto'],
   ['karategi', 'Karategi'], ['ninjasuit', 'Traje ninja'], ['happi', 'Happi japonés'], ['jersey', 'Camiseta de fútbol'], ['labcoat', 'Bata de laboratorio'],
-  ['apron', 'Delantal'], ['sailor', 'Marinero'], ['sweater', 'Jersey de rombos'], ['raincoat', 'Chubasquero'], ['hero', 'Superhéroe'], ['none', 'Sin ropa']];
+  ['apron', 'Delantal'], ['sailor', 'Marinero'], ['sweater', 'Jersey de rombos'], ['raincoat', 'Chubasquero'], ['hero', 'Superhéroe'], ['toga', 'Toga romana'], ['none', 'Sin ropa']];
 export const PANTS = [['shorts', 'Cortos'], ['long', 'Largos'], ['cargo', 'Cargo'], ['buttons', 'Con botones'], ['skirt', 'Falda'],
   ['mawashi', 'Mawashi de sumo'], ['hakama', 'Hakama'], ['jeans', 'Vaqueros'], ['kilt', 'Falda escocesa'], ['tutu', 'Tutú']];
 export const HATS = [['none', 'Ninguno'], ['sprout', 'Brote'], ['band', 'Cinta'], ['cap', 'Gorra'], ['capback', 'Gorra al revés'], ['beanie', 'Gorro de lana'],
   ['propeller', 'Hélice'], ['tophat', 'Chistera'], ['crown', 'Corona'], ['cowboy', 'Vaquero'], ['viking', 'Vikingo'], ['chef', 'Chef'], ['pirate', 'Pirata'],
   ['party', 'Fiesta'], ['halo', 'Aureola'], ['headphones', 'Cascos'], ['afro', 'Afro'], ['mohawk', 'Cresta'], ['buzz', 'Rapado'], ['spiky', 'Pelo de punta'], ['slick', 'Engominado'], ['helmet', 'Casco espacial'],
   ['topknot', 'Moño de sumo'], ['hachimaki', 'Hachimaki'], ['ninjahood', 'Capucha ninja'], ['kasa', 'Sombrero de paja'], ['sombrero', 'Sombrero mexicano'],
-  ['wizard', 'Mago'], ['grad', 'Birrete'], ['beret', 'Boina'], ['santa', 'Gorro navideño'], ['unicorn', 'Unicornio'], ['flower', 'Corona de flores'], ['bucket', 'Gorro pescador']];
+  ['wizard', 'Mago'], ['grad', 'Birrete'], ['beret', 'Boina'], ['santa', 'Gorro navideño'], ['unicorn', 'Unicornio'], ['flower', 'Corona de flores'], ['bucket', 'Gorro pescador'], ['laurel', 'Corona de laurel']];
 export const GLASSES = [['none', 'Ninguna'], ['sun', 'De sol'], ['round', 'Redondas'], ['heart', 'Corazón'], ['patch', 'Parche'], ['ski', 'De esquí'], ['monocle', 'Monóculo'], ['3d', 'Gafas 3D'], ['star', 'Estrella']];
 export const FACES = [['none', 'Nada'], ['mustache', 'Bigote'], ['beard', 'Barba'], ['mask', 'Antifaz'], ['ninja', 'Bandana'], ['ninjamask', 'Máscara ninja'], ['clown', 'Nariz de payaso'], ['surgical', 'Mascarilla'], ['goatee', 'Perilla']];
 export const NECKS = [['none', 'Nada'], ['bowtie', 'Pajarita'], ['tie', 'Corbata'], ['chain', 'Cadena'], ['scarf', 'Bufanda'], ['medal', 'Medalla de oro'], ['lei', 'Collar de flores'], ['whistle', 'Silbato'], ['ruff', 'Gola']];
@@ -70,6 +70,7 @@ export const OUTFITS = [
   { id: 'wizard', name: 'Mago', look: { hat: 'wizard', hatColor: '#4b3aa8', shirt: 'hoodie', shirtColor: '#4b3aa8', face: 'beard', hairColor: '#f2eee6', back: 'cape', accent: '#2a1f66', pants: 'long', pantsColor: '#2a1f66', glasses: 'round', neck: 'none', gloves: null } },
   { id: 'scientist', name: 'Científica', look: { shirt: 'labcoat', shirtColor: '#ffffff', glasses: 'round', hat: 'slick', hairColor: '#e07a2b', neck: 'tie', accent: '#2f5bd3', pants: 'long', pantsColor: '#3b3f46', face: 'none', back: 'none', gloves: null } },
   { id: 'surfer', name: 'Surfero', look: { shirt: 'none', pants: 'shorts', pantsColor: '#3ee0b0', back: 'surfboard', accent: '#ff8a3d', neck: 'lei', glasses: 'sun', hat: 'none', face: 'none', skin: '#c98a5b', gloves: null } },
+  { id: 'caesar', name: 'César', look: { skin: '#f4c6a5', shirt: 'toga', shirtColor: '#f4efe3', accent: '#6b2a8c', pants: 'hakama', pantsColor: '#f4efe3', hat: 'laurel', back: 'cape', shoes: '#8a5a2b', eyes: 'sleepy', face: 'none', glasses: 'none', neck: 'none', gloves: null } },
   { id: 'dj', name: 'DJ', look: { hat: 'headphones', hatColor: '#1c1c24', shirt: 'hoodie', shirtColor: '#8b6cff', glasses: 'heart', neck: 'chain', pants: 'cargo', pantsColor: '#1c1c24', face: 'none', back: 'none', ears: 'none', gloves: null } },
 ];
 
@@ -249,7 +250,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
 
   // ---- Torso ----
   const shirt = look.shirt;
-  const sleeveShirt = ['tee', 'polo', 'hawaii', 'stripes', 'flannel', 'overalls', 'gi', 'karategi', 'happi', 'jersey', 'sailor', 'hero', 'apron'].includes(shirt);
+  const sleeveShirt = ['tee', 'polo', 'hawaii', 'stripes', 'flannel', 'overalls', 'gi', 'karategi', 'happi', 'jersey', 'sailor', 'hero', 'apron', 'toga'].includes(shirt);
   const longSleeve = ['hoodie', 'track', 'leather', 'suit', 'spacesuit', 'ninjasuit', 'labcoat', 'sweater', 'raincoat'].includes(shirt);
   if (shirt !== 'none') {
     const s0 = shirt === 'labcoat' || shirt === 'raincoat' ? 0.05 : shirt === 'hoodie' || shirt === 'leather' || shirt === 'suit' || shirt === 'track' || shirt === 'sweater' ? 0.15 : 0.19;
@@ -352,13 +353,21 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       const v = mesh(own(new THREE.CircleGeometry(R * 0.38, 3)), toon(0x2b3a7a), false); v.rotation.z = -Math.PI / 2; v.scale.set(1.3, 0.8, 1); v.position.set(0, H * 0.48, zAt(0.48, 0) + 0.018); torso.add(v);
       const kn = mesh(own(new THREE.ConeGeometry(0.05, 0.12, 4)), toon(0xe0352b), false); kn.rotation.z = Math.PI; kn.position.set(0, H * 0.41, zAt(0.41, 0) + 0.035); torso.add(kn);
     }
+    if (shirt === 'toga') {
+      const sash = mesh(own(new THREE.TorusGeometry(surf(0.4) + 0.025, 0.06, 8, 40)), toon(accentHex), false);
+      sash.rotation.set(Math.PI / 2, 0.62, 0); sash.position.y = H * 0.42; sash.scale.set(1, 1, 1.05); torso.add(sash);
+      const fold = mesh(own(new THREE.TorusGeometry(surf(0.4) + 0.012, 0.035, 8, 40)), toon(darken(shirtHex, 0.08)), false);
+      fold.rotation.set(Math.PI / 2, -0.5, 0); fold.position.y = H * 0.36; torso.add(fold);
+      ring(0.19, 0.03, accentHex, 0.02);
+      const pin = sphere(0.035, 0xf2b632, 0.008, false); pin.position.set(-R * 0.55, H * 0.55, zAt(0.55, R * 0.55) + 0.03); torso.add(pin);
+    }
     if (shirt === 'hero') {
       const em = mesh(own(new THREE.CircleGeometry(R * 0.32, 28)), toon(0xffc93c), false); em.position.set(0, H * 0.43, zAt(0.43, 0) + 0.02); torso.add(em);
       const bolt = mesh(own(new THREE.CircleGeometry(R * 0.2, 3)), toon(accentHex), false); bolt.position.set(0, H * 0.43, zAt(0.43, 0) + 0.026); bolt.rotation.z = Math.PI / 2; torso.add(bolt);
       ring(0.22, 0.03, 0xffc93c, 0.02);
     }
     // número a la espalda (lo ves durante todo el partido)
-    if (!['overalls', 'gi', 'karategi', 'spacesuit', 'ninjasuit', 'happi', 'labcoat', 'apron', 'sailor'].includes(shirt)) {
+    if (!['overalls', 'gi', 'karategi', 'spacesuit', 'ninjasuit', 'happi', 'labcoat', 'apron', 'sailor', 'toga'].includes(shirt)) {
       const numMat = own(new THREE.MeshBasicMaterial({ map: own(numberTexture(look.number, lightShirt ? '#2d2366' : '#ffffff')), transparent: true, depthWrite: false }));
       const sN = 0.38, rN = surf(sN) + 0.022;
       const num = new THREE.Mesh(own(new THREE.CylinderGeometry(rN, rN, H * 0.22, 20, 1, true, Math.PI - 0.6, 1.2)), numMat);
@@ -862,6 +871,18 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       const v = mesh(own(new THREE.TorusGeometry(hatR * 0.95, 0.018, 6, 36)), toon(0x3e8f4a), false); v.rotation.x = Math.PI / 2; v.position.y = top * 0.35; hat.add(v);
       const cols = [0xff5fb2, 0xffc93c, 0xffffff, 0xff8a3d, 0xb39cff];
       for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; const f = sphere(0.036, cols[k % 5], 0.006, false); f.position.set(Math.sin(a) * hatR * 0.95, top * 0.35 + 0.01, Math.cos(a) * hatR * 0.95); hat.add(f); }
+      break;
+    }
+    case 'laurel': {
+      const band = mesh(own(new THREE.TorusGeometry(hatR, 0.012, 6, 36)), toon(0x3d7a33), false); band.rotation.x = Math.PI / 2; band.position.y = -0.02; hat.add(band);
+      for (const side of [-1, 1]) for (let k = 0; k < 8; k++) for (const row of [0, 1]) {
+        const a = side * (0.25 + k * 0.32) + Math.PI;            // de atrás (lazo) hacia la frente
+        const leaf = mesh(own(new THREE.SphereGeometry(0.045, 8, 6)), toon(row ? 0x6fb84a : 0x4f9a38), false);
+        leaf.scale.set(0.5, 0.32, 1.25);
+        leaf.position.set(Math.sin(a) * (hatR + 0.01), -0.02 + (row ? 0.035 : -0.005), Math.cos(a) * (hatR + 0.01));
+        leaf.rotation.set(row ? -0.5 : 0.4, a + side * 0.5, side * 0.3); hat.add(leaf);
+      }
+      for (const s of [-1, 1]) { const rib = box(0.03, 0.12, 0.01, 0xf2b632, 0.004, false); rib.position.set(s * 0.04, -0.09, hatR); rib.rotation.z = s * 0.25; hat.add(rib); }
       break;
     }
     case 'bucket': {

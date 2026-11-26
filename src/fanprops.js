@@ -149,6 +149,44 @@ const DEFS = {
   ] },
   swimring: { slot: 'waist', parts: () => [0, 1, 2, 3].map(k => part(g.torus(0.25, 0.07, PI / 2, 8), k % 2 ? WHITE : 'team', M4(0, 0.2, 0, PI / 2, 0, k * PI / 2))) },
 
+  // ===================== COLISEO =====================
+  toga: { slot: 'waist', parts: () => [
+    part(g.cyl(0.216, 0.24, 0.3, 16, true), 0xf4efe3, M4(0, 0.2, 0)),                          // túnica
+    part(g.torus(0.215, 0.05, TAU, 22), 0xece3cf, M4(0, 0.33, 0, PI / 2, 0.62, 0)),             // toga cruzada al hombro
+    part(g.torus(0.218, 0.022, TAU, 22), 'team', M4(0, 0.3, 0, PI / 2, 0.62, 0)),               // franja (clavus) del equipo
+    part(g.torus(0.24, 0.02, TAU, 22), 'team', M4(0, 0.06, 0, PI / 2)),                         // ribete
+    part(g.ball(0.03), 0xf2b632, M4(-0.12, 0.42, 0.15)),                                        // broche
+  ] },
+  galea: { slot: 'head', parts: () => [
+    part(g.dome(0.225), 0xb8bcc6, M4(0, 0.5, 0, 0, 0, 0, 1, 1.02, 1)),                          // casco
+    part(g.torus(0.222, 0.02, TAU, 24), 0xc9a24a, M4(0, 0.51, 0, PI / 2)),                      // ribete de bronce
+    part(g.box(0.24, 0.025, 0.07), 0xb8bcc6, M4(0, 0.55, 0.21, 0.2)),                          // visera
+    ...[-1, 1].map(s => part(g.box(0.025, 0.14, 0.11), 0xa9adb8, M4(s * 0.205, 0.42, 0.08, 0, 0, s * 0.12))),   // carrilleras
+    part(g.box(0.035, 0.03, 0.34), 0xc9a24a, M4(0, 0.735, 0)),                                  // soporte del penacho
+    part(g.box(0.06, 0.13, 0.36), 'team', M4(0, 0.81, -0.01)),                                  // penacho (del color del equipo)
+    part(g.cyl(0.03, 0.03, 0.1, 8), 0x8a8e98, M4(0, 0.47, -0.21, 0.4)),                         // cubrenuca
+  ] },
+  romanlaurel: { slot: 'head', parts: () => [part(g.torus(0.2, 0.012, TAU, 24), 0x3d7a33, M4(0, 0.57, 0, PI / 2 - 0.12)),
+    ...Array.from({ length: 16 }, (_, k) => { const a = (k / 16) * TAU; if (Math.abs(Math.cos(a) - 1) < 0.12) return null; return part(g.ball(0.042, 8, 6), k % 2 ? 0x6fb84a : 0x4f9a38, M4(Math.sin(a) * 0.205, 0.585 - Math.cos(a) * 0.024 + (k % 2) * 0.02, Math.cos(a) * 0.205, 0.3, a, 0.5, 1, 0.38, 0.62)); }).filter(Boolean),
+    part(g.box(0.025, 0.1, 0.01), 0xf2b632, M4(-0.03, 0.5, -0.2, 0, 0, 0.3)), part(g.box(0.025, 0.1, 0.01), 0xf2b632, M4(0.03, 0.5, -0.2, 0, 0, -0.3))] },
+  gladius: { slot: 'hand', parts: () => [
+    part(g.box(0.045, 0.32, 0.012), 0xd8dde6, M4(0, 0.32, 0)),                                  // hoja
+    part(g.cone(0.024, 0.06, 4), 0xd8dde6, M4(0, 0.51, 0, 0, PI / 4)),                          // punta
+    part(g.box(0.012, 0.3, 0.014), 0xa9b0bd, M4(0, 0.32, 0.002)),                               // acanaladura
+    part(g.box(0.12, 0.03, 0.04), 0xc9a24a, M4(0, 0.15, 0)),                                    // guarda
+    part(g.cyl(0.02, 0.022, 0.1, 8), 0x6b4423, M4(0, 0.09, 0)),                                 // empuñadura
+    part(g.ball(0.032), 0xc9a24a, M4(0, 0.03, 0)),                                              // pomo
+  ] },
+  vexillum: { slot: 'hand', parts: () => [
+    part(g.cyl(0.01, 0.01, 0.7, 6), 0x6b4423, M4(0, 0.15, 0)),
+    part(g.cyl(0.008, 0.008, 0.3, 6), 0x6b4423, M4(0, 0.44, 0, 0, 0, PI / 2)),
+    part(g.plane(0.26, 0.3), 'team', M4(0, 0.28, 0.005), { double: true }),                      // tela
+    part(g.box(0.27, 0.025, 0.01), 0xf2b632, M4(0, 0.14, 0.008)),                               // flecos
+    part(g.cyl(0.035, 0.035, 0.008, 14), 0xf2b632, M4(0, 0.3, 0.01, PI / 2)),                   // emblema
+    part(g.ball(0.04), 0xf2b632, M4(0, 0.52, 0)),                                               // remate
+    ...[-1, 1].map(s => part(g.box(0.1, 0.05, 0.015), 0xf2b632, M4(s * 0.06, 0.55, 0, 0, 0, s * 0.4))),   // alas del águila
+  ] },
+
   // ===================== DISCOTECA =====================
   glowsticks: { slot: 'hand', parts: () => [
     part(g.cyl(0.016, 0.016, 0.26, 8), 'team', M4(0, 0.15, 0, 0, 0, 0.35), { glow: true }),
@@ -174,6 +212,7 @@ export const STAGE_FANS = {
   polar: [['beanie', 0.55], ['scarf', 0.5]],
   sea: [['divemask', 0.5], ['swimring', 0.4]],
   neon: [['headphones', 0.4], ['neonglasses', 0.45], ['glowsticks', 0.5]],
+  colosseum: [['toga', 0.65], ['galea', 0.25], ['romanlaurel', 0.3], ['gladius', 0.25], ['vexillum', 0.25]],
 };
 
 export function buildFanProps(group, stageId, fans) {

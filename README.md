@@ -14,7 +14,8 @@ Ping pong arcade 3D con estilo cartoon, física de efecto real, frijolitos perso
 ### Escenarios
 Antes de cada partido (prelobby) eliges entre **10 sedes**, con vista previa en directo detrás del menú, o **Aleatorio**:
 Parque · Favela (morro con casitas y cometas) · Playa · Estadio Ponglímpico (la ola y pebetero) · El Infierno (lava y diablillos) ·
-Azotea de un rascacielos · Base Lunar · Polo Norte (pingüinos y auroras) · Fondo del Mar · Discoteca Neón.
+Azotea de un rascacielos · Base Lunar · Polo Norte (pingüinos y auroras) · Fondo del Mar · Discoteca Neón ·
+Coliseo Romano (anillo de arcos con su tramo derrumbado, palco imperial, velario; el juez es el César).
 En online manda el escenario del anfitrión.
 
 ### Rachas
