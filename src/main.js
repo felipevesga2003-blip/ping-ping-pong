@@ -14,7 +14,7 @@ import { createOnline } from './online.js';
 import { createArena } from './arena.js';
 import { createReferee } from './referee.js';
 import { createFX } from './fx.js';
-import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume } from './audio.js';
+import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume, setAmbient } from './audio.js';
 import { createMenu, renderControls, CONTROLS, setPadHints } from './ui.js';
 import { P as PR, sanitizeLook, boosts, padStats, matchReward, recordMatch, setNamed, isOwned, save as saveProgress, charLevel } from './progress.js';
 import { createWorkshop, coinHTML } from './workshop.js';
@@ -164,13 +164,13 @@ function enterGame() {
 function startGame() {
   enterGame(); show('netTag', false);
   roster = cpuRoster(settings.mode);
-  arena.setStage(resolveStage(settings.stage, arena.stage));
+  arena.setStage(resolveStage(settings.stage, arena.stage)); setAmbient(arena.stage);
   buildViews();
   newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf() });
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
-  screen = 'menu'; setSfxEnabled(false);
+  screen = 'menu'; setSfxEnabled(false); setAmbient(null);
   show('menu', true); show('over', false); show('pause', false); show('hud', false); show('netTag', false);
   if (wasOnline && !keepRoom) { online.send({ t: 'bye' }); online.leave(); }
   else if (wasOnline) online.endMatch();
@@ -280,7 +280,7 @@ function startOnline(m) {
   rematch = { me: false, them: new Set() };
   $('againBtn').classList.remove('waiting');
   const cfg = m.cfg, n = cfg.mode === '2v2' ? 4 : 2, g = online.S.slot;
-  arena.setStage(stageById(cfg.stage).id);
+  arena.setStage(stageById(cfg.stage).id); setAmbient(arena.stage);
   roster = [];
   for (let li = 0; li < n; li++) {
     const s = globalOf(li), p = m.players.find(x => x.slot === s) || { look: CPU_LOOKS[0], bot: true };

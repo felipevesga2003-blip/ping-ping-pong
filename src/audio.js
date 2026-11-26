@@ -120,3 +120,26 @@ export const SFX = {
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.28, 'square', 0.08, 0, i * 0.12)); },
   lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.3, 'triangle', 0.1, 0, i * 0.15)); },
 };
+
+// ---------- Ambiente de cada escenario (muy bajito, solo durante el partido) ----------
+// Cada sede programa pequeños sonidos sintetizados: olas, viento, ritmo, burbujas…
+let ambT = null, ambId = null;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const AMB = {
+  park: () => { if (Math.random() < 0.5) { const f = rnd(2300, 3200); tone(f, 0.08, 'sine', 0.025, f * 1.25); tone(f * 1.1, 0.07, 'sine', 0.02, f * 1.35, 0.12); } return rnd(1.6, 4); },
+  favela: () => { tone(70, 0.22, 'sine', 0.07, 50); tone(70, 0.18, 'sine', 0.05, 50, 0.36); noise(0.04, 0.02, 5200, { delay: 0.18 }); noise(0.04, 0.02, 5200, { delay: 0.27 }); return 0.72; },
+  beach: () => { noise(3.2, 0.045, 520, { attack: 1.3, q: 0.3, type: 'lowpass' }); if (Math.random() < 0.25) tone(1700, 0.25, 'triangle', 0.015, 1300, 1.2); return rnd(4.5, 6); },
+  olympic: () => { noise(2.8, 0.022, 900, { attack: 0.8, q: 0.4 }); return 2.2; },
+  hell: () => { tone(42, 2.6, 'sawtooth', 0.02, 38); for (let k = 0; k < 4; k++) noise(0.03, 0.03, 3000, { delay: rnd(0, 2) }); return 2.4; },
+  rooftop: () => { noise(4, 0.03, 380, { attack: 1.6, q: 0.5, type: 'lowpass' }); if (Math.random() < 0.15) tone(330, 0.5, 'square', 0.008, 0, 1); return rnd(3, 4.5); },
+  moon: () => { tone(58, 3, 'sine', 0.025); if (Math.random() < 0.4) tone(1250, 0.06, 'square', 0.01, 0, rnd(0.5, 2.5)); return 2.8; },
+  polar: () => { noise(3.6, 0.035, rnd(600, 1100), { attack: 1.4, q: 1.4 }); return rnd(2.6, 3.6); },
+  sea: () => { for (let k = 0; k < 3; k++) { const d = rnd(0, 1.2), f = rnd(280, 520); tone(f, 0.09, 'sine', 0.025, f * 2.4, d); } noise(2.5, 0.02, 300, { attack: 1, type: 'lowpass' }); return rnd(1.6, 2.4); },
+  neon: () => { const b = 60 / 124; for (let k = 0; k < 4; k++) { tone(110, 0.16, 'sine', 0.09, 40, k * b); noise(0.03, 0.025, 8000, { delay: k * b + b / 2 }); } return b * 4; },
+};
+export function setAmbient(id) {
+  clearTimeout(ambT); ambId = id;
+  if (!id || !AMB[id]) return;
+  const step = () => { if (ambId !== id) return; const next = on() ? AMB[id]() : 1; ambT = setTimeout(step, next * 1000); };
+  ambT = setTimeout(step, 600);
+}

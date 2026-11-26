@@ -8,6 +8,7 @@ import { toon, box, sphere, cyl, outlineMat } from './models.js';
 import { PALETTE } from './config.js';
 import { SKINS } from './character.js';
 import { STAGES, stageById, skyTexture, disposeTree } from './stages.js';
+import { buildFanProps } from './fanprops.js';
 
 function roundedRect(w, h, r) {
   const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
@@ -84,6 +85,7 @@ export function createArena(scene, lights) {
           s: 0.85 + Math.random() * 0.3, skin: new THREE.Color(SKINS[Math.floor(Math.random() * SKINS.length)]),
           phase: Math.random() * 6.28, speed: 1.2 + Math.random() * 1.4, hype: 0, mood: 0,
           cap: Math.random() < 0.4, flag: Math.random() < 0.3, rot: side === 0 ? Math.PI / 2 : -Math.PI / 2,
+          roll: { head: Math.random(), eyes: Math.random(), neck: Math.random(), waist: Math.random(), hand: Math.random() },
         });
       }
     }
@@ -101,8 +103,10 @@ export function createArena(scene, lights) {
   const flags = inst(new THREE.PlaneGeometry(0.3, 0.2), new THREE.MeshToonMaterial({ gradientMap: toon(0xffffff).gradientMap, side: THREE.DoubleSide }));
   fans.forEach((f, i) => bodies.setColorAt(i, f.skin));
 
+  let teamCols = [new THREE.Color('#ffc93c'), new THREE.Color('#ff5a6e')], props = null;
   function setTeams(c0, c1) {
     const cols = [new THREE.Color(c0), new THREE.Color(c1)];
+    teamCols = cols; if (props) props.recolor(cols);
     fans.forEach((f, i) => { shirts.setColorAt(i, cols[f.side]); capsG.setColorAt(i, cols[f.side]); flags.setColorAt(i, cols[f.side]); });
     for (const m of [shirts, capsG, flags]) m.instanceColor.needsUpdate = true;
     barriers.forEach((b, i) => b.userData.mesh.material = toon(cols[i].getHex()));
@@ -112,6 +116,7 @@ export function createArena(scene, lights) {
 
   const D = new THREE.Object3D(), M = new THREE.Matrix4(), L = new THREE.Matrix4(), T = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0);
   const STICK = new THREE.Matrix4().makeTranslation(0.26, 0.55, 0.05), FLAG = new THREE.Matrix4().makeTranslation(0.15, 0.15, 0);
+  const fanM = fans.map(() => new THREE.Matrix4()), handM = fans.map(() => new THREE.Matrix4());
   const eyeL = [new THREE.Matrix4().makeTranslation(-0.075, 0.47, 0.175), new THREE.Matrix4().makeTranslation(0.075, 0.47, 0.175)];
 
   function update(t, dt, ball) {
@@ -124,7 +129,7 @@ export function createArena(scene, lights) {
       D.rotation.set(f.mood > 0 ? 0.25 : 0, f.rot, Math.sin(t * f.speed * 0.7 + f.phase) * 0.06);
       D.scale.setScalar(f.s);
       D.updateMatrix();
-      M.copy(D.matrix);
+      M.copy(D.matrix); fanM[i].copy(M);
       const put = (im, idx, local) => { T.multiplyMatrices(M, local); im.setMatrixAt(idx, T); };
       // cuerpo (base en y=0 → cápsula centrada en 0.31)
       L.makeTranslation(0, 0.31, 0); put(bodies, i, L); put(outlines, i, L);
@@ -136,9 +141,10 @@ export function createArena(scene, lights) {
         L.copy(eyeL[e]); L.elements[12] += look; L.elements[14] += 0.032;
         put(pupils, i * 2 + e, L);
       }
-      if (f.cap) { L.makeTranslation(0, 0.53, 0); put(capsG, i, L); } else capsG.setMatrixAt(i, Z);
-      if (f.flag) {
-        const wave = Math.sin(t * (f.hype > 0 ? 12 : 3) + f.phase) * (f.hype > 0 ? 0.6 : 0.25);
+      const wave = Math.sin(t * (f.hype > 0 ? 12 : 3) + f.phase) * (f.hype > 0 ? 0.6 : 0.25);
+      L.makeRotationZ(wave).premultiply(STICK); handM[i].multiplyMatrices(M, L);
+      if (f.cap && !(props && props.head(i))) { L.makeTranslation(0, 0.53, 0); put(capsG, i, L); } else capsG.setMatrixAt(i, Z);
+      if (f.flag && !(props && props.hand(i))) {
         L.makeRotationZ(wave).premultiply(STICK);
         put(sticks, i, L);
         L.multiply(FLAG);
@@ -146,6 +152,11 @@ export function createArena(scene, lights) {
       } else { sticks.setMatrixAt(i, Z); flags.setMatrixAt(i, Z); }
     }
     for (const m of [bodies, outlines, shirts, whites, pupils, capsG, sticks, flags]) m.instanceMatrix.needsUpdate = true;
+    // accesorios del escenario: siguen al aficionado (o a su mano)
+    if (props) for (const m of props.meshes) {
+      for (let j = 0; j < m.who.length; j++) { const fi = m.who[j]; T.multiplyMatrices(m.hand ? handM[fi] : fanM[fi], m.local); m.im.setMatrixAt(j, T); }
+      m.im.instanceMatrix.needsUpdate = true;
+    }
     if (stageUpdate) stageUpdate(t, dt);
   }
 
@@ -184,6 +195,7 @@ export function createArena(scene, lights) {
     ring.material = border.material;
     buildTiers(stageGroup, S);
     stageUpdate = S.build(stageGroup, stageCtx) || null;
+    props = buildFanProps(stageGroup, S.id, fans); props.recolor(teamCols);
     scene.add(stageGroup);
   }
   setStage(STAGES[0].id);
