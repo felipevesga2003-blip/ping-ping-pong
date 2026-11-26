@@ -75,21 +75,18 @@ Y cámara · View cambiar estilo · Menu pausa · cruceta y L3/R3 emotes. En los
 
 Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
 
-## Dirección de arte: «Cartel de función»
-El ping-pong de barrio se anunciaba con **carteles de imprenta**, los mismos que las funciones de box y lucha libre:
-papel barato amarillo, tinta roja, tipos de madera apilados, la manita ☞ señalando y sellos de goma.
-La interfaz está hecha con esos objetos y con objetos reales del ping-pong:
-- el menú es un **cartel pegado** (programa de la función) y los paneles son **fichas** de papel;
-- el marcador es un **marcador de tarjetas abatibles**, que se voltea con cada punto;
-- los avisos son **sellos de goma** sobre tiras de papel; el final del partido es el **acta**;
-- la selección se marca con la **manita de imprenta** o un **círculo de bolígrafo**.
+## Dirección de arte: «Hinomaru»
+Síntesis de dos referencias elegidas entre cuatro propuestas:
+- **Estructura del constructivismo** (Lissitzky, Rodchenko, carteles de la Spartakiada): un gran círculo rojo
+  que sangra por la esquina con el logo, el menú en **escalera de barras negras a −15°**, la **cuña roja**
+  que señala la opción elegida, el 3D visto por una **ventana con marco negro** sobre papel crema y las
+  **cintas cruzadas** para los puntos.
+- **Voz del manga deportivo** (*Ping Pong* de Taiyō Matsumoto, spokon): Dela Gothic One, katakana como
+  segunda capa (しあい, たいせん…), tramas de puntos, selección por inversión a negro y onomatopeyas (ドン!).
 
-Tipografía con oficio: **League Gothic** (renacimiento de Alternate Gothic, gótica de madera de cartel),
-**Ultra** (egipcia de madera, solo palabras cortas) y **Courier Prime** (máquina de escribir, todo lo que se lee).
-Dos tintas: **rojo ** y **amarillo ** sobre papel  y tinta de texto .
-Sin gradientes, brillos ni sombras de botón: grano de papel, bordes rasgados, desregistro y tinta gastada.
-El logo ( en index.html) está compuesto como un cartel: PING PING en gótica, PONG en egipcia de madera
-con la O convertida en bola, el amarillo impreso primero y el rojo encima con desregistro.
+El círculo rojo une ambas: es el sol (hinomaru), la bola y el círculo constructivista.
+Tintas: rojo , amarillo , negro  y papel . Tipos: Dela Gothic One, Zen Kaku Gothic New y Jost.
+Ángulos: −15° para la estructura, −6° para cintas y avisos. Sin gradientes, brillos ni sombras.
 
 ## Motor y arquitectura
 - **Three.js r169** (local en `vendor/`), WebGL, sombras PCF, materiales toon + contorno *inverted hull*.

@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="theme-color" content="#D92B1C">
+<meta name="theme-color" content="#E8301F">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Ping Ping Pong</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='10' fill='%23F8E3A6'/%3E%3Ccircle cx='54' cy='53' r='32' fill='%23FFC629'/%3E%3Ccircle cx='50' cy='50' r='29' fill='none' stroke='%23D92B1C' stroke-width='9'/%3E%3Cpath d='M26 47q24 16 48 0' fill='none' stroke='%23D92B1C' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23E8301F'/%3E%3Ccircle cx='66' cy='66' r='14' fill='%23FFC629' stroke='%23111' stroke-width='5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=League+Gothic&family=Ultra&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Jost:wght@500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script>
   // Diagnóstico temprano: muestra cualquier error de carga en pantalla
@@ -42,12 +42,11 @@
 <body>
 <!-- ================= PANTALLA DE CARGA ================= -->
 <div id="loader">
-  <div class="ld-sheet">
-    <div class="ld-head"><span>La Arena del Parque</span><span>presenta</span></div>
-    <svg class="ld-logo" viewBox="0 0 600 330"><use href="#logo"/></svg>
+  <svg class="ld-sun" viewBox="0 0 600 600" overflow="visible"><use href="#logo"/></svg>
+  <div class="ld-side">
+    <div class="ld-kana">しあい じゅんび ちゅう</div>
     <div class="ld-bar"><i id="ldFill"></i></div>
-    <div class="ld-tip"><b>Consejo de la casa:</b> <span id="ldTip">Calentando la mesa…</span></div>
-    <div class="ld-foot">Imprimiendo el cartel · espere un momento</div>
+    <div class="ld-tip"><b>Consejo</b><span id="ldTip">Calentando la mesa…</span></div>
   </div>
 </div>
 <script>
@@ -71,36 +70,18 @@
   <defs>
     <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
     <symbol id="i-hand" viewBox="0 0 64 30"><path fill="currentColor" d="M2 6h8v18H2zM12 5.5c0-1.4 1.1-2.5 2.5-2.5H30c1.6 0 2.8.7 3.6 1.9l1.3 2.1H58a4 4 0 0 1 0 8H38v1.5h6.5a3 3 0 0 1 0 6H38v.5h4.5a2.8 2.8 0 0 1 0 5.6H16.5A4.5 4.5 0 0 1 12 22.6z"/><path d="M38 15.5h-7M38 21.5h-6" stroke="#F8E3A6" stroke-width="1.6" stroke-linecap="round"/></symbol>
-    <!-- ===== LOGO: compuesto como un cartel de imprenta =====
-         · PING PING en gótica condensada (League Gothic, tipo de madera)
-         · PONG en egipcia de madera (Ultra); la O es una bola: aro rojo con alma amarilla
-         · dos tintas: el amarillo se imprime primero y el rojo encima, ligeramente desregistrado
-         · filetes doble/simple y una línea en máquina de escribir, como en los carteles de función -->
-    <symbol id="logo" viewBox="0 0 600 330">
-      <defs>
-        <g id="lgPong" style="font: 400 172px Ultra, 'Rockwell Extra Bold', serif">
-          <text x="30" y="268" textLength="134" lengthAdjust="spacingAndGlyphs">P</text>
-          <text x="322" y="268" textLength="250" lengthAdjust="spacingAndGlyphs">NG</text>
-        </g>
-      </defs>
-      <!-- primera tinta: amarillo (desplazado) -->
-      <g fill="#FFC629" transform="translate(6 5)">
-        <use href="#lgPong"/>
-        <circle cx="244" cy="206" r="64"/>
+    <!-- ===== LOGO «Hinomaru»: el círculo rojo es a la vez el sol, la bola y el círculo constructivista.
+         El rótulo va girado −15° sobre la diagonal del menú y se sale del círculo, en negro. ===== -->
+    <symbol id="logo" viewBox="0 0 600 600" overflow="visible">
+      <circle cx="300" cy="300" r="300" fill="#E8301F"/>
+      <g transform="rotate(-15 390 420)">
+        <text x="168" y="352" fill="#F4EDE0" style="font: 800 40px Jost, 'Futura', sans-serif; letter-spacing: 17px">PING PING</text>
+        <text x="146" y="478" textLength="452" lengthAdjust="spacingAndGlyphs" fill="#111" style="font: 400 170px 'Dela Gothic One', 'Arial Black', sans-serif">PONG</text>
+        <rect x="168" y="504" width="246" height="42" fill="#111"/>
+        <text x="186" y="533" fill="#FFC629" style="font: 700 21px Jost, 'Futura', sans-serif; letter-spacing: 8px">TEMPORADA 1</text>
       </g>
-      <!-- segunda tinta: rojo -->
-      <g fill="#D92B1C" style="mix-blend-mode: multiply">
-        <use href="#lgPong"/>
-        <circle cx="244" cy="206" r="57" fill="none" stroke="#D92B1C" stroke-width="15"/>
-        <path d="M190 214 q54 -18 108 -14" fill="none" stroke="#D92B1C" stroke-width="7" stroke-linecap="round"/>
-        <circle cx="72" cy="56" r="10"/><circle cx="528" cy="56" r="10"/>
-      </g>
-      <!-- tinta de texto -->
-      <text x="300" y="88" text-anchor="middle" textLength="392" lengthAdjust="spacingAndGlyphs" fill="#2A0F0B" style="font: 400 96px 'League Gothic', 'Arial Narrow', sans-serif; letter-spacing: 4px">PING PING</text>
-      <path d="M64 104 H536" stroke="#2A0F0B" stroke-width="4"/>
-      <path d="M64 111 H536" stroke="#2A0F0B" stroke-width="1.4"/>
-      <path d="M64 296 H104 M496 296 H536" stroke="#2A0F0B" stroke-width="1.4"/>
-      <text x="300" y="303" text-anchor="middle" fill="#2A0F0B" style="font: italic 700 21px 'Courier Prime', 'Courier New', monospace">gran función de tenis de mesa</text>
+      <text x="548" y="178" writing-mode="tb" fill="#F4EDE0" style="font: 900 30px 'Zen Kaku Gothic New', sans-serif; letter-spacing: 4px">ピンピンポン</text>
+      <circle cx="96" cy="512" r="25" fill="#FFC629" stroke="#111" stroke-width="8"/>
     </symbol>
     <symbol id="i-bean" viewBox="0 0 120 150">
       <path d="M60 10c27 0 45 19 45 46v46c0 22-18 38-45 38S15 124 15 102V56c0-27 18-46 45-46z" fill="currentColor" stroke="#22100F" stroke-width="7"/>
@@ -155,49 +136,42 @@
     </div>
   </header>
 
+  <div class="mn-paper"></div>
+  <div class="mn-window"></div>
+  <svg class="mn-traj" viewBox="0 0 600 300" preserveAspectRatio="none"><path d="M10 290 Q 260 -40 590 120" fill="none" stroke="#111" stroke-width="3" stroke-dasharray="10 9" vector-effect="non-scaling-stroke"/></svg>
+  <div class="mn-vert">アリーナ · Arena del parque — 1971</div>
   <div class="menu-left">
-    <div class="poster">
-    <div class="poster-top"><span>La Arena del Parque</span><span>presenta</span></div>
-    <h1 class="logo" aria-label="Ping Ping Pong"><svg viewBox="0 0 600 330"><use href="#logo"/></svg></h1>
+    <h1 class="logo" aria-label="Ping Ping Pong"><svg viewBox="0 0 600 600" overflow="visible"><use href="#logo"/></svg></h1>
     <nav id="nav">
       <button class="nav-item" data-id="play">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Jugar</span><span class="sub">Partido rápido contra la CPU</span></span>
+        <span class="nav-txt" data-kana="しあい"><span class="lbl">Jugar</span><span class="sub">Partido rápido contra la CPU</span></span>
         <span class="idx">01</span>
       </button>
       <button class="nav-item" data-id="online">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Online</span><span class="sub" id="navOnline">Juega contra un amigo</span></span>
+        <span class="nav-txt" data-kana="たいせん"><span class="lbl">Online</span><span class="sub" id="navOnline">Juega contra un amigo</span></span>
         <span class="idx">02</span>
       </button>
       <button class="nav-item" data-id="char">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Personaje</span><span class="sub" id="navChar">Tú · Camiseta</span></span>
+        <span class="nav-txt" data-kana="きがえ"><span class="lbl">Personaje</span><span class="sub" id="navChar">Tú · Camiseta</span></span>
         <span class="idx">03</span>
       </button>
       <button class="nav-item" data-id="shop">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Taller</span><span class="sub" id="navShop">Habilidades y palas</span></span>
+        <span class="nav-txt" data-kana="しゅぎょう"><span class="lbl">Taller</span><span class="sub" id="navShop">Habilidades y palas</span></span>
         <span class="idx">04</span>
       </button>
       <button class="nav-item" data-id="style">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Estilo de juego</span><span class="sub" id="navStyle">Clásico</span></span>
+        <span class="nav-txt" data-kana="スタイル"><span class="lbl">Estilo de juego</span><span class="sub" id="navStyle">Clásico</span></span>
         <span class="idx">05</span>
       </button>
       <button class="nav-item" data-id="rules">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Partido</span><span class="sub" id="navRules">Normal · a 11</span></span>
+        <span class="nav-txt" data-kana="ルール"><span class="lbl">Partido</span><span class="sub" id="navRules">Normal · a 11</span></span>
         <span class="idx">06</span>
       </button>
       <button class="nav-item" data-id="help">
-        <svg class="nav-hand"><use href="#i-hand"/></svg>
-        <span class="nav-txt"><span class="lbl">Cómo jugar</span><span class="sub">Controles y técnicas</span></span>
+        <span class="nav-txt" data-kana="あそびかた"><span class="lbl">Cómo jugar</span><span class="sub">Controles y técnicas</span></span>
         <span class="idx">07</span>
       </button>
     </nav>
-    <div class="poster-foot"><span>Temporada 1</span><span>Entrada libre</span><span>Funciones todos los días</span></div>
-    </div>
   </div>
 
 

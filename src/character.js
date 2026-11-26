@@ -130,7 +130,7 @@ function canvasTex(w, h, draw, rx = 1, ry = 1) {
 }
 function numberTexture(num, color) {
   return canvasTex(256, 256, (g) => {
-    g.font = '400 190px "League Gothic", "Arial Narrow", sans-serif';
+    g.font = '400 130px "Dela Gothic One", "Arial Black", sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
     g.lineWidth = 22; g.strokeStyle = '#22100F'; g.strokeText(String(num), 128, 140);
     g.fillStyle = color; g.fillText(String(num), 128, 140);

@@ -25,10 +25,10 @@ function bannerTexture(text, bg, fg, w = 1024, h = 128, reps = 1) {
   g.fillStyle = 'rgba(255,255,255,0.08)';
   for (let x = -h; x < w; x += 36) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + h, 0); g.lineTo(x + h + 14, 0); g.lineTo(x + 14, h); g.fill(); }
   const seg = w / reps;
-  let size = h * 0.78;
-  g.font = `400 ${size}px "League Gothic", "Arial Narrow", sans-serif`;
+  let size = h * 0.5;
+  g.font = `400 ${size}px "Dela Gothic One", "Arial Black", sans-serif`;
   const tw = g.measureText(text).width;
-  if (tw > seg * 0.84) { size *= (seg * 0.84) / tw; g.font = `400 ${size}px "League Gothic", "Arial Narrow", sans-serif`; }
+  if (tw > seg * 0.84) { size *= (seg * 0.84) / tw; g.font = `400 ${size}px "Dela Gothic One", "Arial Black", sans-serif`; }
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   for (let i = 0; i < reps; i++) {
     const cx = seg * (i + 0.5);
@@ -61,7 +61,7 @@ export function createArena(scene, lights) {
   for (let side = 0; side < 2; side++) {
     const sx = side === 0 ? -1 : 1;
     // valla publicitaria frente a la grada (color del equipo)
-    const tex = bannerTexture('PING PING PONG', '#D92B1C', '#F8E3A6', 1024, 128, 2);
+    const tex = bannerTexture('PING PING PONG', '#E8301F', '#FFFDF7', 1024, 128, 2);
     tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = 2.4;
     const mat = new THREE.MeshToonMaterial({ map: tex, color: 0xffffff });
     barrierMats.push(mat);
@@ -194,7 +194,7 @@ export function createArena(scene, lights) {
     get stage() { return stage; },
     // la tipografía web llega después de crear las texturas: se vuelven a pintar
     redrawText() {
-      for (const m of barrierMats) { const t = bannerTexture('PING PING PONG', '#D92B1C', '#F8E3A6', 1024, 128, 2); t.wrapS = THREE.RepeatWrapping; t.repeat.x = 2.4; m.map.dispose(); m.map = t; m.needsUpdate = true; }
+      for (const m of barrierMats) { const t = bannerTexture('PING PING PONG', '#E8301F', '#FFFDF7', 1024, 128, 2); t.wrapS = THREE.RepeatWrapping; t.repeat.x = 2.4; m.map.dispose(); m.map = t; m.needsUpdate = true; }
       const s = stage; stage = null; setStage(s);
     },
     // la grada del ganador salta, la del perdedor se lamenta

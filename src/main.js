@@ -58,10 +58,12 @@ const fx = createFX(scene);
 
 const overlay = $('overlay'), octx = overlay.getContext('2d');
 let dpr = 1;
+let camOff = null;   // desplazamiento de la imagen en el menú (ventana del 3D)
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
   camera.aspect = w / h; camera.updateProjectionMatrix();
+  camOff = null;
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   overlay.width = w * dpr; overlay.height = h * dpr;
   overlay.style.width = w + 'px'; overlay.style.height = h + 'px';
@@ -217,7 +219,7 @@ function renderStages() {
   const card = (id, name, bg) => `<button class="st-card${settings.stage === id ? ' on' : ''}" data-st="${id}"><i style="background:${bg}"></i><span>${name}</span></button>`;
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   $('plStages').innerHTML = STAGES.map(s => card(s.id, s.short || s.name, `linear-gradient(${s.sky[0]}, ${s.sky[1]} 45%, ${s.sky[2]} 62%, ${hex(s.ground ?? s.court[1])} 62%, ${hex(s.court[1])})`)).join('')
-    + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #D92B1C 0 10px, #FFC629 10px 20px)');
+    + card('random', 'Aleatorio', 'repeating-linear-gradient(135deg, #E8301F 0 10px, #FFC629 10px 20px)');
   const s = settings.stage === 'random' ? null : stageById(settings.stage);
   $('plStageDesc').textContent = s ? s.name + ' · ' + s.desc : 'Uno distinto cada partido';
 }
@@ -1095,11 +1097,13 @@ function updateCamera(dt) {
   }
   camera.lookAt(camLook);
   shake *= Math.exp(-8 * dt);
+  const wantOff = screen === 'menu' && innerWidth > 1100 ? Math.round(-innerWidth * 0.0) : 0;
+  if (wantOff !== camOff) { camOff = wantOff; if (wantOff) camera.setViewOffset(innerWidth, innerHeight, wantOff, 0, innerWidth, innerHeight); else camera.clearViewOffset(); }
 }
 
 // ---------- Capa 2D: anillo de timing y carga ----------
 function label(s, text, color) {
-  octx.font = '400 30px "League Gothic", sans-serif'; octx.textAlign = 'center';
+  octx.font = '400 22px "Dela Gothic One", sans-serif'; octx.textAlign = 'center';
   octx.lineJoin = 'round'; octx.lineWidth = 7; octx.strokeStyle = '#22100F';
   octx.strokeText(text.toUpperCase(), s.x, s.y - 32);
   octx.fillStyle = color; octx.fillText(text.toUpperCase(), s.x, s.y - 32);
