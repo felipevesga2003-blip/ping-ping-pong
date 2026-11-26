@@ -41,7 +41,7 @@ export const DIFFS = [
 
 // Paleta cartoon
 export const PALETTE = {
-  outline: 0x2a2140,
+  outline: 0x2a1512,
   player: 0x4da8ff,
   cpu: 0xff6b8b,
   ball: 0xffb020,

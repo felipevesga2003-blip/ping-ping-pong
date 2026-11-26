@@ -20,7 +20,7 @@ const starTex = canvasTex(128, (g, s) => {
   }
   g.closePath();
   g.fillStyle = '#ffffff'; g.fill();
-  g.lineWidth = 7; g.strokeStyle = '#2a2140'; g.stroke();
+  g.lineWidth = 7; g.strokeStyle = '#2a1512'; g.stroke();
 });
 const ringTex = canvasTex(128, (g, s) => {
   g.lineWidth = 12; g.strokeStyle = '#ffffff';
@@ -119,7 +119,7 @@ export function createFX(scene) {
   // ---- Retícula de apuntado y marcador de bote ----
   const reticle = new THREE.Group();
   const rOuter = new THREE.Mesh(new THREE.RingGeometry(0.075, 0.1, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false }));
-  const rIn = new THREE.Mesh(new THREE.CircleGeometry(0.075, 40), new THREE.MeshBasicMaterial({ color: 0xff6b8b, transparent: true, opacity: 0.55, depthWrite: false }));
+  const rIn = new THREE.Mesh(new THREE.CircleGeometry(0.075, 40), new THREE.MeshBasicMaterial({ color: 0xe5322d, transparent: true, opacity: 0.6, depthWrite: false }));
   const rDot = new THREE.Mesh(new THREE.CircleGeometry(0.02, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, depthWrite: false }));
   for (const m of [rIn, rOuter, rDot]) { m.rotation.x = -Math.PI / 2; reticle.add(m); }
   rIn.position.y = 0.001; rOuter.position.y = 0.002; rDot.position.y = 0.003;

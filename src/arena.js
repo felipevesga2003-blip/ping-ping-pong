@@ -26,13 +26,13 @@ function bannerTexture(text, bg, fg, w = 1024, h = 128, reps = 1) {
   for (let x = -h; x < w; x += 36) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + h, 0); g.lineTo(x + h + 14, 0); g.lineTo(x + 14, h); g.fill(); }
   const seg = w / reps;
   let size = h * 0.56;
-  g.font = `italic 900 ${size}px Rubik, "Arial Black", sans-serif`;
+  g.font = `italic 900 ${size}px Archivo, "Arial Black", sans-serif`;
   const tw = g.measureText(text).width;
-  if (tw > seg * 0.84) { size *= (seg * 0.84) / tw; g.font = `italic 900 ${size}px Rubik, "Arial Black", sans-serif`; }
+  if (tw > seg * 0.84) { size *= (seg * 0.84) / tw; g.font = `italic 900 ${size}px Archivo, "Arial Black", sans-serif`; }
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   for (let i = 0; i < reps; i++) {
     const cx = seg * (i + 0.5);
-    g.lineWidth = size * 0.2; g.strokeStyle = '#1a1238'; g.strokeText(text, cx, h * 0.54);
+    g.lineWidth = size * 0.2; g.strokeStyle = '#22100F'; g.strokeText(text, cx, h * 0.54);
     g.fillStyle = fg; g.fillText(text, cx, h * 0.54);
     g.fillStyle = 'rgba(255,255,255,0.5)';                 // separador entre repeticiones
     g.beginPath(); g.arc(seg * (i + 1) - 2, h / 2, h * 0.06, 0, Math.PI * 2); g.fill();
@@ -57,14 +57,15 @@ export function createArena(scene, lights) {
   // ---------- Gradas laterales ----------
   // lado 0 = izquierda (afición del jugador), lado 1 = derecha (afición de la CPU)
   const TIERS = 4, ROWS = 12, Z0 = -4.4, Z1 = 4.4;
-  const barriers = [], barrierTex = [];
+  const barriers = [], barrierTex = [], barrierMats = [];
   for (let side = 0; side < 2; side++) {
     const sx = side === 0 ? -1 : 1;
     // valla publicitaria frente a la grada (color del equipo)
-    const tex = bannerTexture('PING PING PONG', '#1a1238', '#ffffff', 1024, 128, 2);
+    const tex = bannerTexture('PING PING PONG', '#E5322D', '#FFF3DA', 1024, 128, 2);
     tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = 2.4;
     const mat = new THREE.MeshToonMaterial({ map: tex, color: 0xffffff });
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, Z1 - Z0 + 0.6), [mat, mat, toon(0x1a1238), toon(0x1a1238), mat, mat]);
+    barrierMats.push(mat);
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, Z1 - Z0 + 0.6), [mat, mat, toon(0x24120f), toon(0x24120f), mat, mat]);
     panel.position.set(sx * 3.05, 0.25, 0); panel.castShadow = true; scene.add(panel);
     const cap = box(0.12, 0.06, Z1 - Z0 + 0.62, 0xffffff, 0.015); cap.position.set(sx * 3.05, 0.53, 0); scene.add(cap);
     barriers.push(cap); barrierTex.push(tex);
@@ -94,7 +95,7 @@ export function createArena(scene, lights) {
   const outlines = inst(new THREE.CapsuleGeometry(0.218, 0.22, 8, 16), outlineMat);
   const shirts = inst(new THREE.CylinderGeometry(0.212, 0.212, 0.2, 20, 1, true), new THREE.MeshToonMaterial({ gradientMap: toon(0xffffff).gradientMap, side: THREE.DoubleSide }));
   const whites = inst(new THREE.SphereGeometry(0.055, 12, 8), toon(0xffffff), N * 2);
-  const pupils = inst(new THREE.SphereGeometry(0.028, 10, 6), toon(0x1a1238), N * 2);
+  const pupils = inst(new THREE.SphereGeometry(0.028, 10, 6), toon(0x24120f), N * 2);
   const capsG = inst(new THREE.SphereGeometry(0.21, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshToonMaterial({ gradientMap: toon(0xffffff).gradientMap }));
   const sticks = inst(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), toon(0x9c6b43));
   const flags = inst(new THREE.PlaneGeometry(0.3, 0.2), new THREE.MeshToonMaterial({ gradientMap: toon(0xffffff).gradientMap, side: THREE.DoubleSide }));
@@ -191,6 +192,11 @@ export function createArena(scene, lights) {
     setTeams,
     setStage,
     get stage() { return stage; },
+    // la tipografía web llega después de crear las texturas: se vuelven a pintar
+    redrawText() {
+      for (const m of barrierMats) { const t = bannerTexture('PING PING PONG', '#E5322D', '#FFF3DA', 1024, 128, 2); t.wrapS = THREE.RepeatWrapping; t.repeat.x = 2.4; m.map.dispose(); m.map = t; m.needsUpdate = true; }
+      const s = stage; stage = null; setStage(s);
+    },
     // la grada del ganador salta, la del perdedor se lamenta
     cheer(winnerSide, strength = 1) {
       for (const f of fans) {

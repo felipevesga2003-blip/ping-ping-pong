@@ -99,7 +99,7 @@ function miniBean(color, s = 1) {
   const out = new THREE.Mesh(new THREE.CapsuleGeometry(0.235, 0.26, 6, 14), outlineMat); out.position.y = 0.35; g.add(out);
   for (const ex of [-0.08, 0.08]) {
     const e = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), toon(0xffffff)); e.position.set(ex, 0.5, 0.19); g.add(e);
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), toon(0x1a1238)); p.position.set(ex, 0.5, 0.235); g.add(p);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), toon(0x24120f)); p.position.set(ex, 0.5, 0.235); g.add(p);
   }
   g.scale.setScalar(s);
   return g;
@@ -124,7 +124,7 @@ function buildPark(g) {
     clouds.push({ cl: cloud(g, Math.sin(a) * 30, rnd(9, 14), Math.cos(a) * 30), a, speed: rnd(0.1, 0.25) });
   }
   for (const sx of [-1, 1]) {
-    const post = cyl(0.07, 0.07, 2.4, 0x1a1238, 0.015); post.position.set(sx * 3.3, 1.2, -5.6); g.add(post);
+    const post = cyl(0.07, 0.07, 2.4, 0x24120f, 0.015); post.position.set(sx * 3.3, 1.2, -5.6); g.add(post);
     const lamp = sphere(0.18, 0xfff3b0, 0.02, false); lamp.position.set(sx * 3.3, 2.5, -5.6); g.add(lamp);
   }
   const cols = [0xffc93c, 0xff5a6e, 0x3ee0b0, 0x3b9bff, 0xffffff, 0x8b6cff];
@@ -155,8 +155,8 @@ function buildFavela(g) {
       // ventanas y puerta en la fachada que mira a la pista
       const fx = -Math.sin(a), fz = -Math.cos(a), rx = Math.cos(a), rz = -Math.sin(a);
       const fy = hh - 0.75;
-      for (const off of w > 2 ? [-0.45, 0.45] : [0]) wins.push({ x: p.x + fx * (dep / 2 + 0.01) + rx * off, y: fy, z: p.z + fz * (dep / 2 + 0.01) + rz * off, sx: 0.42, sy: 0.5, sz: 0.04, ry: a, c: pick(['#2a2140', '#2a2140', '#ffe08a']) });
-      if (hh > 3.2) wins.push({ x: p.x + fx * (dep / 2 + 0.01), y: fy - 1.2, z: p.z + fz * (dep / 2 + 0.01), sx: 0.4, sy: 0.48, sz: 0.04, ry: a, c: '#2a2140' });
+      for (const off of w > 2 ? [-0.45, 0.45] : [0]) wins.push({ x: p.x + fx * (dep / 2 + 0.01) + rx * off, y: fy, z: p.z + fz * (dep / 2 + 0.01) + rz * off, sx: 0.42, sy: 0.5, sz: 0.04, ry: a, c: pick(['#2a1512', '#2a1512', '#ffe08a']) });
+      if (hh > 3.2) wins.push({ x: p.x + fx * (dep / 2 + 0.01), y: fy - 1.2, z: p.z + fz * (dep / 2 + 0.01), sx: 0.4, sy: 0.48, sz: 0.04, ry: a, c: '#2a1512' });
       if (k === 0) doors.push({ x: p.x + fx * (dep / 2 + 0.01) + rx * 0.5, y: 0.5, z: p.z + fz * (dep / 2 + 0.01) + rz * 0.5, sx: 0.5, sy: 1.0, sz: 0.04, ry: a, c: pick(['#6b4423', '#3b9bff', '#2a9d8f']) });
       roofs.push({ x: p.x, y: hh + 0.06, z: p.z, sx: w + 0.2, sy: 0.12, sz: dep + 0.2, ry: a, c: '#b9b2a8' });
       if (Math.random() < 0.3) tanks.push({ x: p.x + rx * 0.4, y: hh + 0.42, z: p.z + rz * 0.4, s: 1, c: '#3b6fd8' });
@@ -195,7 +195,7 @@ function buildFavela(g) {
     kite.rotation.z = Math.PI / 4;
     const tail = M(new THREE.BoxGeometry(0.04, 0.9, 0.01), toon(0xffffff), 0, -0.9, 0); kite.add(tail);
     const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-    const line = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x2a2140, transparent: true, opacity: 0.5 })); g.add(line);
+    const line = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x2a1512, transparent: true, opacity: 0.5 })); g.add(line);
     kites.push({ kite, line, anchor, ph: rnd(0, TAU), h: rnd(9, 15), a, d: d - rnd(2, 5) });
   }
   for (const [x, z] of [[-8.5, -7.5], [8.5, -7.5], [-9.5, 6], [9.5, 6]]) palm(g, x, z, rnd(3.6, 4.6), rnd(0.3, 0.8), rnd(0, TAU));
@@ -279,7 +279,7 @@ function buildBeach(g) {
   const cb = M(new THREE.SphereGeometry(0.22, 16, 10), toon(0xff4d3d), 0, 0.14, 0, crab); cb.scale.set(1.3, 0.6, 1); cb.castShadow = true;
   for (const s of [-1, 1]) {
     const claw = M(new THREE.SphereGeometry(0.09, 10, 8), toon(0xff4d3d), s * 0.36, 0.18, 0.12, crab);
-    for (const ex of [-0.07, 0.07]) { const st = M(new THREE.SphereGeometry(0.04, 8, 6), toon(0xffffff), ex, 0.3, 0.12, crab); M(new THREE.SphereGeometry(0.02, 6, 4), toon(0x1a1238), 0, 0, 0.03, st); }
+    for (const ex of [-0.07, 0.07]) { const st = M(new THREE.SphereGeometry(0.04, 8, 6), toon(0xffffff), ex, 0.3, 0.12, crab); M(new THREE.SphereGeometry(0.02, 6, 4), toon(0x24120f), 0, 0, 0.03, st); }
     claw.userData.s = s;
   }
   crab.position.set(0, 0, 7.2); g.add(crab);
@@ -346,10 +346,10 @@ function buildOlympic(g, ctx) {
   const scrTex = canvasTex(1024, 384, (c, w, h) => {
     c.fillStyle = '#10142e'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,0.05)';
     for (let y = 0; y < h; y += 6) c.fillRect(0, y, w, 2);
-    c.font = 'italic 900 120px Rubik, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = 'italic 900 120px Archivo, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd166'; c.fillText('JUEGOS', w / 2, h * 0.32); c.fillStyle = '#ffffff'; c.fillText('PONGLÍMPICOS', w / 2, h * 0.7);
   });
-  const scr = M(new THREE.BoxGeometry(14, 5.2, 0.5), [toon(0x2a2140), toon(0x2a2140), toon(0x2a2140), toon(0x2a2140), glow(0xffffff, { map: scrTex }), toon(0x2a2140)], 22, 19, -26, g);
+  const scr = M(new THREE.BoxGeometry(14, 5.2, 0.5), [toon(0x2a1512), toon(0x2a1512), toon(0x2a1512), toon(0x2a1512), glow(0xffffff, { map: scrTex }), toon(0x2a1512)], 22, 19, -26, g);
   scr.lookAt(0, 19, 0);
   // podio
   const pod = new THREE.Group(); pod.position.set(-9.5, 0, 6.8); pod.rotation.y = 0.9;
@@ -442,9 +442,9 @@ function buildHell(g, ctx) {
     const b = miniBean(0xe0302a, 1.1);
     for (const s of [-1, 1]) { const h = M(new THREE.ConeGeometry(0.05, 0.16, 8), toon(0xfff1e0), s * 0.12, 0.64, 0.02, b); h.rotation.z = -s * 0.4; }
     const fork = new THREE.Group(); fork.position.set(0.3, 0.35, 0.05); b.add(fork);
-    M(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 6), toon(0x2a2140), 0, 0, 0, fork);
-    for (const fx of [-0.06, 0, 0.06]) M(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 6), toon(0x2a2140), fx, 0.45, 0, fork);
-    M(new THREE.BoxGeometry(0.15, 0.02, 0.02), toon(0x2a2140), 0, 0.38, 0, fork);
+    M(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 6), toon(0x2a1512), 0, 0, 0, fork);
+    for (const fx of [-0.06, 0, 0.06]) M(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 6), toon(0x2a1512), fx, 0.45, 0, fork);
+    M(new THREE.BoxGeometry(0.15, 0.02, 0.02), toon(0x2a1512), 0, 0.38, 0, fork);
     const tail = M(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 6), toon(0xe0302a), 0, 0.2, -0.24, b); tail.rotation.x = 0.9;
     const rock = M(new THREE.DodecahedronGeometry(0.55), toon(0x3d2222), x, 0.3, z, g);
     b.position.set(x, 0.75, z); b.lookAt(0, 0.75, 0); g.add(b);
@@ -528,10 +528,10 @@ function buildRooftop(g) {
   const hb = M(new THREE.SphereGeometry(1, 18, 12), toon(0xff5a3d), 0, 0, 0, heli); hb.scale.set(1.5, 0.9, 0.9); hb.castShadow = true;
   M(new THREE.SphereGeometry(0.62, 14, 10), ownToon(0x9fe0ff, { transparent: true, opacity: 0.8 }), 0.75, 0.15, 0, heli);
   const boom = M(new THREE.CylinderGeometry(0.12, 0.22, 2.4, 10), toon(0xff5a3d), -2.1, 0.2, 0, heli); boom.rotation.z = Math.PI / 2;
-  const rotor = M(new THREE.BoxGeometry(5, 0.05, 0.25), toon(0x2a2140), 0, 1.0, 0, heli);
-  const rotor2 = M(new THREE.BoxGeometry(0.25, 0.05, 5), toon(0x2a2140), 0, 1.0, 0, heli);
-  const tailR = M(new THREE.BoxGeometry(0.06, 1.0, 0.15), toon(0x2a2140), -3.3, 0.3, 0.12, heli);
-  for (const z of [-0.6, 0.6]) M(new THREE.BoxGeometry(2.2, 0.06, 0.08), toon(0x2a2140), 0, -0.95, z, heli);
+  const rotor = M(new THREE.BoxGeometry(5, 0.05, 0.25), toon(0x2a1512), 0, 1.0, 0, heli);
+  const rotor2 = M(new THREE.BoxGeometry(0.25, 0.05, 5), toon(0x2a1512), 0, 1.0, 0, heli);
+  const tailR = M(new THREE.BoxGeometry(0.06, 1.0, 0.15), toon(0x2a1512), -3.3, 0.3, 0.12, heli);
+  for (const z of [-0.6, 0.6]) M(new THREE.BoxGeometry(2.2, 0.06, 0.08), toon(0x2a1512), 0, -0.95, z, heli);
   g.add(heli);
   // palomas en el pretil
   const birds = [];
@@ -594,7 +594,7 @@ function buildMoon(g) {
   const lm = new THREE.Group(); lm.position.set(-11, 0, -8); lm.rotation.y = 0.6;
   const lb = M(new THREE.CylinderGeometry(1.1, 1.1, 1.2, 8), toon(0xe0b24a), 0, 1.6, 0, lm); lb.castShadow = true;
   const lt = box(1.3, 0.9, 1.3, 0xdfe3ea, 0.03); lt.position.y = 2.65; lm.add(lt);
-  M(new THREE.CircleGeometry(0.25, 16), toon(0x2a2140), 0, 2.75, 0.66, lm);
+  M(new THREE.CircleGeometry(0.25, 16), toon(0x2a1512), 0, 2.75, 0.66, lm);
   for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + Math.PI / 4; const l = cyl(0.05, 0.05, 1.8, 0xc9ccd6, 0.015); l.position.set(Math.sin(a) * 1.3, 0.8, Math.cos(a) * 1.3); l.rotation.set(Math.cos(a) * 0.4, 0, -Math.sin(a) * 0.4); lm.add(l); const f = cyl(0.25, 0.25, 0.06, 0xc9ccd6, 0.01); f.position.set(Math.sin(a) * 1.65, 0.03, Math.cos(a) * 1.65); lm.add(f); }
   g.add(lm);
   // cúpulas de la base
@@ -612,7 +612,7 @@ function buildMoon(g) {
   const rb = box(1.4, 0.4, 0.8, 0xf2f4f8, 0.025); rb.position.y = 0.55; rover.add(rb);
   const rp = box(0.9, 0.04, 0.9, 0x3b6fd8, 0.01); rp.position.set(0, 0.95, 0); rover.add(rp);
   const wheels = [];
-  for (const x of [-0.5, 0, 0.5]) for (const z of [-0.48, 0.48]) { const w = M(new THREE.CylinderGeometry(0.22, 0.22, 0.14, 14), toon(0x2a2140), x, 0.22, z, rover); w.rotation.x = Math.PI / 2; wheels.push(w); }
+  for (const x of [-0.5, 0, 0.5]) for (const z of [-0.48, 0.48]) { const w = M(new THREE.CylinderGeometry(0.22, 0.22, 0.14, 14), toon(0x2a1512), x, 0.22, z, rover); w.rotation.x = Math.PI / 2; wheels.push(w); }
   g.add(rover);
   // astronautas dando saltitos (gravedad lunar)
   const astros = [];
@@ -641,7 +641,7 @@ function buildPolar(g) {
     const ig = new THREE.Group(); ig.position.set(x, 0, z); ig.scale.setScalar(s); ig.lookAt(0, 0, 0);
     M(new THREE.SphereGeometry(1.6, 24, 14, 0, TAU, 0, Math.PI / 2), toon(0xf4f9ff), 0, 0, 0, ig).castShadow = true;
     const tn = M(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 16, 1, false, 0, Math.PI), toon(0xeaf3ff), 0, 0, 1.4, ig); tn.rotation.set(Math.PI / 2, 0, Math.PI / 2);
-    M(new THREE.CircleGeometry(0.5, 16, 0, Math.PI), toon(0x2a2140), 0, 0, 2.01, ig);
+    M(new THREE.CircleGeometry(0.5, 16, 0, Math.PI), toon(0x2a1512), 0, 0, 2.01, ig);
     for (let k = 1; k < 4; k++) { const l = M(new THREE.TorusGeometry(1.6 * Math.cos(k * 0.38), 0.02, 4, 36), toon(0xc6d8f0), 0, 1.6 * Math.sin(k * 0.38), 0, ig); l.rotation.x = Math.PI / 2; }
     g.add(ig);
   }
@@ -653,7 +653,7 @@ function buildPolar(g) {
     const sm = new THREE.Group(); sm.position.set(x, 0, z); sm.lookAt(0, 0, 0);
     [[0.55, 0.5], [0.4, 1.25], [0.28, 1.8]].forEach(([r, y]) => { const s = sphere(r, 0xffffff, 0.02); s.position.y = y; sm.add(s); });
     const nose = M(new THREE.ConeGeometry(0.06, 0.3, 8), toon(0xff8a3d), 0, 1.8, 0.4, sm); nose.rotation.x = Math.PI / 2;
-    for (const ex of [-0.1, 0.1]) M(new THREE.SphereGeometry(0.035, 8, 6), toon(0x1a1238), ex, 1.9, 0.25, sm);
+    for (const ex of [-0.1, 0.1]) M(new THREE.SphereGeometry(0.035, 8, 6), toon(0x24120f), ex, 1.9, 0.25, sm);
     const scarf = M(new THREE.TorusGeometry(0.32, 0.07, 6, 18), toon(0xff5a6e), 0, 1.55, 0, sm); scarf.rotation.x = Math.PI / 2;
     g.add(sm);
   }
@@ -664,7 +664,7 @@ function buildPolar(g) {
     const body = M(new THREE.CapsuleGeometry(0.2, 0.25, 6, 14), toon(0x1f2340), 0, 0.33, 0, p); body.castShadow = true;
     M(new THREE.CapsuleGeometry(0.21, 0.25, 6, 14), outlineMat, 0, 0.33, 0, p);
     const belly = M(new THREE.SphereGeometry(0.17, 14, 10), toon(0xffffff), 0, 0.3, 0.07, p); belly.scale.set(0.95, 1.4, 0.8);
-    for (const ex of [-0.07, 0.07]) { M(new THREE.SphereGeometry(0.045, 8, 6), toon(0xffffff), ex, 0.52, 0.16, p); M(new THREE.SphereGeometry(0.022, 6, 4), toon(0x1a1238), ex, 0.52, 0.2, p); }
+    for (const ex of [-0.07, 0.07]) { M(new THREE.SphereGeometry(0.045, 8, 6), toon(0xffffff), ex, 0.52, 0.16, p); M(new THREE.SphereGeometry(0.022, 6, 4), toon(0x24120f), ex, 0.52, 0.2, p); }
     const beak = M(new THREE.ConeGeometry(0.05, 0.12, 8), toon(0xffa53d), 0, 0.45, 0.22, p); beak.rotation.x = Math.PI / 2;
     for (const fx of [-0.09, 0.09]) M(new THREE.BoxGeometry(0.1, 0.03, 0.14), toon(0xffa53d), fx, 0.02, 0.06, p);
     const wings = [-1, 1].map(s => { const w = M(new THREE.BoxGeometry(0.04, 0.26, 0.12), toon(0x1f2340), s * 0.21, 0.36, 0, p); return w; });
@@ -755,7 +755,7 @@ function buildSea(g) {
       const f = new THREE.Group();
       const body = M(new THREE.SphereGeometry(0.16, 12, 8), toon(col), 0, 0, 0, f); body.scale.set(1.6, 1, 0.6);
       const tail = M(new THREE.ConeGeometry(0.12, 0.2, 4), toon(col), -0.3, 0, 0, f); tail.rotation.z = Math.PI / 2;
-      M(new THREE.SphereGeometry(0.035, 6, 4), toon(0x1a1238), 0.17, 0.04, 0.07, f);
+      M(new THREE.SphereGeometry(0.035, 6, 4), toon(0x24120f), 0.17, 0.04, 0.07, f);
       g.add(f); fish.push({ f, tail, o: new THREE.Vector3(rnd(-1, 1), rnd(-0.5, 0.5), rnd(-1, 1)) });
     }
     schools.push({ fish, r: rnd(10, 17), h: rnd(2.5, 6), v: rnd(0.12, 0.25) * (s % 2 ? 1 : -1), a: rnd(0, TAU) });
@@ -785,7 +785,7 @@ function buildSea(g) {
   const wb = M(new THREE.CapsuleGeometry(2.4, 6, 8, 16), toon(0x3a6fb0), 0, 0, 0, whale); wb.rotation.z = Math.PI / 2;
   const belly = M(new THREE.CapsuleGeometry(2.0, 5, 8, 16), toon(0xbfd6ee), 0, -0.9, 0, whale); belly.rotation.z = Math.PI / 2; belly.scale.z = 0.8;
   const tailW = M(new THREE.BoxGeometry(0.4, 0.3, 4.4), toon(0x3a6fb0), -6.4, 0.4, 0, whale);
-  M(new THREE.SphereGeometry(0.25, 8, 6), toon(0x1a1238), 3.6, 0.5, 1.6, whale);
+  M(new THREE.SphereGeometry(0.25, 8, 6), toon(0x24120f), 3.6, 0.5, 1.6, whale);
   g.add(whale);
   return (t, dt) => {
     for (const w of weeds) w.segs.forEach((s, k) => { s.rotation.z = Math.sin(t * 1.2 + w.ph + k * 0.5) * 0.18; s.rotation.x = Math.cos(t * 0.9 + w.ph + k * 0.4) * 0.1; });
@@ -826,7 +826,7 @@ function buildNeon(g, ctx) {
   for (const z of [-3, 3]) for (const sx of [-1, 1]) { const tube = M(new THREE.TorusGeometry(2.2, 0.06, 6, 40), glow(sx > 0 ? 0x3df2ff : 0xff3df2), sx * 9.5, 3.2, z, g); tube.rotation.y = Math.PI / 2; arcs.push(tube); }
   // rótulo
   const sTex = canvasTex(1024, 256, (c, w, h) => {
-    c.font = 'italic 900 170px Rubik, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = 'italic 900 170px Archivo, "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.shadowColor = '#ff3df2'; c.shadowBlur = 30; c.lineWidth = 10; c.strokeStyle = '#ff7af6'; c.strokeText('PONG CLUB', w / 2, h / 2);
     c.shadowBlur = 0; c.fillStyle = '#ffe6fd'; c.fillText('PONG CLUB', w / 2, h / 2);
   });
@@ -845,7 +845,7 @@ function buildNeon(g, ctx) {
   const deckR = M(new THREE.CylinderGeometry(0.35, 0.35, 0.06, 20), toon(0x111111), 0.8, 1.13, -8.3, g);
   const strip = M(new THREE.BoxGeometry(3.22, 0.08, 0.02), glow(0x3df2ff), 0, 0.85, -7.69, g);
   const dj = miniBean(0xffc93c, 1.5); dj.position.set(0, 0.6, -8.9); g.add(dj);
-  const phones = M(new THREE.TorusGeometry(0.25, 0.04, 6, 20, Math.PI), toon(0x2a2140), 0, 0.68, 0, dj);
+  const phones = M(new THREE.TorusGeometry(0.25, 0.04, 6, 20, Math.PI), toon(0x2a1512), 0, 0.68, 0, dj);
   for (const s of [-1, 1]) M(new THREE.CylinderGeometry(0.08, 0.08, 0.06, 12), toon(0xff3df2), s * 0.25, 0.62, 0, dj).rotation.z = Math.PI / 2;
   // láseres
   const lasers = [];

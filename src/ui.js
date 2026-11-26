@@ -93,7 +93,7 @@ export function renderControls(mode) {
 const HELP = {
   classic: {
     steps: [
-      ['Apunta', 'Mueve el <b>ratón</b> sobre la mesa rival: la diana rosa marca dónde caerá tu bola.'],
+      ['Apunta', 'Mueve el <b>ratón</b> sobre la mesa rival: la diana roja marca dónde caerá tu bola.'],
       ['Carga', 'Mantén pulsado el <b>clic</b>. Cuanto más tiempo, más fuerte sale el golpe.'],
       ['Suelta a tiempo', 'Cuando la bola viene, un <b>anillo</b> se cierra sobre ella. Suelta justo cuando se pone <b>amarillo</b>.'],
       ['Muévete', 'Tu frijolito corre solo a la bola. En modo manual usa <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>.'],

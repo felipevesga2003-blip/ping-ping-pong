@@ -75,6 +75,12 @@ Y cámara · View cambiar estilo · Menu pausa · cruceta y L3/R3 emotes. En los
 
 Comunes: **Tab** cambia entre Clásico y Mano libre en pleno partido (también desde la pausa) · 1–6 emotes · bola alta = smash · rueda = distancia de cámara (al tope, 1ª persona) · WASD mover (modo manual) · P/Esc pausa · M sonido · H ocultar controles.
 
+## Dirección de arte
+**«Pabellón 71»**: cartelería deportiva de los años 70 (la «diplomacia del ping-pong» de 1971 y las retransmisiones retro) con acabado de juego moderno.
+Solo dos colores, **rojo bermellón ** y **amarillo dorado **, sobre tinta cálida  y crema .
+Tipografía Archivo Expanded Black en cursiva, franjas de carreras, semitono, rayos de sol y sombras duras de serigrafía.
+El logo es un símbolo SVG ( en index.html): PONG rojo con filete crema y franjas doradas, y la bola como O.
+
 ## Motor y arquitectura
 - **Three.js r169** (local en `vendor/`), WebGL, sombras PCF, materiales toon + contorno *inverted hull*.
 - **Física propia** a 240 Hz: gravedad, arrastre, efecto Magnus (ω × v), rebote con fricción que acopla efecto y velocidad, red y suelo.

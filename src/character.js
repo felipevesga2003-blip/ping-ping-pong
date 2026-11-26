@@ -102,7 +102,7 @@ export function randomLook(name = 'Tú') {
   };
 }
 
-const INK = 0x1a1238;
+const INK = 0x24120f;
 const FOOT = 0.1;   // altura del cuerpo sobre el suelo (las zapatillas van debajo)
 
 // Perfil de frijol: r(s), s ∈ [0,1] de abajo arriba
@@ -130,9 +130,9 @@ function canvasTex(w, h, draw, rx = 1, ry = 1) {
 }
 function numberTexture(num, color) {
   return canvasTex(256, 256, (g) => {
-    g.font = 'italic 900 150px Rubik, "Arial Black", sans-serif';
+    g.font = 'italic 900 150px Archivo, "Arial Black", sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-    g.lineWidth = 22; g.strokeStyle = '#1a1238'; g.strokeText(String(num), 128, 140);
+    g.lineWidth = 22; g.strokeStyle = '#22100F'; g.strokeText(String(num), 128, 140);
     g.fillStyle = color; g.fillText(String(num), 128, 140);
   });
 }
