@@ -708,3 +708,61 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .card-head h3 { white-space: nowrap; font-size: 22px; }
 .mn-vert { top: 9vh; bottom: auto; }
 .mbtn { white-space: nowrap; }
+
+
+/* =============================================================
+   CAPA MANGA — rótulos inclinados con contorno, líneas de
+   velocidad y viñetas blancas que se invierten a negro
+   ============================================================= */
+:root {
+  --rays-dark: repeating-conic-gradient(from 0deg at 8% 50%, rgba(255,255,255,.22) 0 .9deg, transparent .9deg 5deg);
+  --rays-light: repeating-conic-gradient(from 0deg at 50% 50%, rgba(17,17,17,.13) 0 1deg, transparent 1deg 5deg);
+}
+/* menú: viñetas blancas en escalera; la elegida, negra con líneas de velocidad */
+#nav { top: 50vh; left: 4vh; gap: .7vh; }
+.nav-item { padding: 1.25vh 30px 1.35vh 26px; background: var(--white); color: var(--ink); border: 3.5px solid var(--ink); overflow: visible; }
+.nav-item:nth-child(2) { margin-left: 36px; } .nav-item:nth-child(3) { margin-left: 72px; } .nav-item:nth-child(4) { margin-left: 108px; }
+.nav-item:nth-child(5) { margin-left: 144px; } .nav-item:nth-child(6) { margin-left: 180px; } .nav-item:nth-child(7) { margin-left: 216px; }
+.nav-txt .lbl { font-size: clamp(20px, 3.4vh, 34px); display: inline-block; transform: skewX(-9deg); }
+.nav-txt::after { font-size: 12px; color: var(--red); }
+.nav-item:hover { background: var(--yellow); color: var(--ink); }
+.nav-item:hover .nav-txt::after { color: var(--red); }
+.nav-item.active { background: var(--rays-dark), var(--ink); color: var(--yellow); border-color: var(--ink); translate: 14px 0; }
+.nav-item.active .nav-txt::after { color: var(--white); }
+.nav-item.active .sub { color: var(--yellow); }
+.nav-item.active::before { left: -62px; }
+
+/* rótulos con estilo de título de manga */
+.card-head { background: var(--rays-dark), var(--ink); }
+.card-head h3 { display: inline-block; transform: skewX(-9deg); color: var(--yellow); font-size: 23px; }
+.sheet-title { display: inline-block; transform: skewX(-9deg); color: var(--red); -webkit-text-stroke: 9px var(--ink); paint-order: stroke fill; letter-spacing: .01em; }
+.sheet-title.lose { color: var(--white); }
+.sheet-title.small { color: var(--ink); -webkit-text-stroke: 0; }
+.sheet-title::after { transform: skewX(9deg); }
+.vs-info b, .opt-lbl b, .set-lbl b, .sc-title, .on-card b, .ws-intro b, .step > div > b, .pub-head b { display: inline-block; transform: skewX(-9deg); }
+.cta-txt, .mbtn span, .bb-buy, .join-btn { font-style: normal; }
+.cta-txt { display: inline-block; transform: skewX(-9deg); }
+.mbtn span { display: inline-block; transform: skewX(-9deg); }
+#banner .big span { transform: skewX(-9deg); }
+#banner .big { background: var(--rays-light), var(--acc); background-position: center; }
+.pop, #count { font-style: normal; }
+.sb-pts { font-style: normal; }
+/* hojas superpuestas: el sol con rayos de manga */
+.screen.dim::after { content: ""; position: absolute; right: -14vh; bottom: -22vh; width: 140vh; height: 140vh; margin: -39vh -39vh 0 0; background: var(--rays-light); pointer-events: none; -webkit-mask: radial-gradient(circle, transparent 22%, #000 26%, transparent 62%); mask: radial-gradient(circle, transparent 22%, #000 26%, transparent 62%); }
+/* menú: también rayos alrededor del sol */
+.mn-paper::after { content: ""; }
+.menu-left::before { content: ""; position: absolute; left: -60vh; top: -70vh; width: 160vh; height: 160vh; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(17,17,17,.11) 0 1deg, transparent 1deg 5.5deg); -webkit-mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 52%); mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 52%); pointer-events: none; z-index: -1; }
+.menu-left { z-index: 1; }
+
+/* vestuario: casillas de ancho fijo (las flechas no se mueven al cambiar) y panel más ancho */
+.menu-panel { width: min(600px, 46vw); }
+.cgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.csel { min-width: 0; }
+.csel > div { display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px; }
+.csel .v { min-width: 0; font-size: 12.5px; }
+.swatch-row { align-items: flex-start; }
+.swatch-row > span { padding-top: 6px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, 28px); gap: 7px; flex: 1; }
+.sw.auto { grid-column: span 2; width: auto; }
+.sheet, .card { overflow-x: hidden; }
+#loader::before { content: ""; position: absolute; left: -60vh; top: -70vh; width: 160vh; height: 160vh; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(17,17,17,.12) 0 1deg, transparent 1deg 5.5deg); -webkit-mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 60%); mask: radial-gradient(circle, transparent 21%, #000 23%, transparent 60%); }

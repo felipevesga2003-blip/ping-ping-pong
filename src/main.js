@@ -59,6 +59,7 @@ const fx = createFX(scene);
 const overlay = $('overlay'), octx = overlay.getContext('2d');
 let dpr = 1;
 let camOff = null;   // desplazamiento de la imagen en el menú (ventana del 3D)
+let charZoom = 0.5;  // zoom del vestidor con la rueda: 0 = cara · 1 = cuerpo entero
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
@@ -1045,6 +1046,8 @@ function setFP(on) {
   views[0].setFirstPerson(on);
 }
 addEventListener('wheel', e => {
+  // vestidor: la rueda acerca o aleja la cámara del frijolito (con límites)
+  if (posing() && !e.target.closest('.menu-panel')) { e.preventDefault(); charZoom = Math.max(0, Math.min(1, charZoom + Math.sign(e.deltaY) * 0.08)); return; }
   if (screen !== 'game') return;
   e.preventDefault();
   camZoom = Math.max(0, Math.min(1, camZoom + Math.sign(e.deltaY) * 0.07));
@@ -1064,9 +1067,10 @@ function updateCamera(dt) {
   const far = aspect < 1.3 ? 1.3 / aspect : 1;
   if (posing()) {
     // Vestidor: plano cercano del personaje, ligeramente desplazado para dejar sitio al panel
-    const p = G.chars[0], hs = settings.look.height;
-    camTarget.set(p.x - 0.1, 0.8 + hs * 0.42, p.z - 2.55 * far);
-    lookTarget.set(p.x - 0.1, 0.5 + hs * 0.28, p.z);
+    // charZoom: 0 = primer plano de la cara · 1 = cuerpo entero con aire
+    const p = G.chars[0], hs = settings.look.height, z = charZoom;
+    camTarget.set(p.x - 0.1, 0.72 + hs * (0.62 - z * 0.24), p.z - (1.15 + z * 2.6) * far);
+    lookTarget.set(p.x - 0.1, 0.42 + hs * (0.55 - z * 0.3), p.z);
   } else if (screen === 'menu') {
     // Plano "hero": de frente al jugador mientras juega la demo
     const p = G.chars[0];

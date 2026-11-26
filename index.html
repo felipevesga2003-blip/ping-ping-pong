@@ -70,18 +70,24 @@
   <defs>
     <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
     <symbol id="i-hand" viewBox="0 0 64 30"><path fill="currentColor" d="M2 6h8v18H2zM12 5.5c0-1.4 1.1-2.5 2.5-2.5H30c1.6 0 2.8.7 3.6 1.9l1.3 2.1H58a4 4 0 0 1 0 8H38v1.5h6.5a3 3 0 0 1 0 6H38v.5h4.5a2.8 2.8 0 0 1 0 5.6H16.5A4.5 4.5 0 0 1 12 22.6z"/><path d="M38 15.5h-7M38 21.5h-6" stroke="#F8E3A6" stroke-width="1.6" stroke-linecap="round"/></symbol>
-    <!-- ===== LOGO «Hinomaru»: el círculo rojo es a la vez el sol, la bola y el círculo constructivista.
-         El rótulo va girado −15° sobre la diagonal del menú y se sale del círculo, en negro. ===== -->
+    <!-- ===== LOGO: rótulo de manga (Dela Gothic inclinada) sobre el sol rojo.
+         PONG en rojo con filete blanco y contorno negro para leerse igual sobre el sol y sobre el papel. ===== -->
     <symbol id="logo" viewBox="0 0 600 600" overflow="visible">
       <circle cx="300" cy="300" r="300" fill="#E8301F"/>
-      <g transform="rotate(-15 390 420)">
-        <text x="168" y="352" fill="#F4EDE0" style="font: 800 40px Jost, 'Futura', sans-serif; letter-spacing: 17px">PING PING</text>
-        <text x="146" y="478" textLength="452" lengthAdjust="spacingAndGlyphs" fill="#111" style="font: 400 170px 'Dela Gothic One', 'Arial Black', sans-serif">PONG</text>
-        <rect x="168" y="504" width="246" height="42" fill="#111"/>
-        <text x="186" y="533" fill="#FFC629" style="font: 700 21px Jost, 'Futura', sans-serif; letter-spacing: 8px">TEMPORADA 1</text>
+      <g transform="translate(118 318) skewX(-10) rotate(-7)">
+        <g id="lgPP" style="font: 400 50px 'Dela Gothic One', 'Arial Black', sans-serif">
+          <text x="44" y="0" fill="#111" stroke="#FFFDF7" stroke-width="12" stroke-linejoin="round" paint-order="stroke">PING PING</text>
+        </g>
+        <g style="font: 400 176px 'Dela Gothic One', 'Arial Black', sans-serif">
+          <text x="0" y="156" textLength="448" lengthAdjust="spacingAndGlyphs" fill="#111" stroke="#111" stroke-width="34" stroke-linejoin="round">PONG</text>
+          <text x="0" y="156" textLength="448" lengthAdjust="spacingAndGlyphs" fill="#FFFDF7" stroke="#FFFDF7" stroke-width="16" stroke-linejoin="round">PONG</text>
+          <text x="0" y="156" textLength="448" lengthAdjust="spacingAndGlyphs" fill="#E8301F">PONG</text>
+        </g>
+        <rect x="50" y="186" width="246" height="40" fill="#111"/>
+        <text x="66" y="214" fill="#FFC629" style="font: 700 21px Jost, 'Futura', sans-serif; letter-spacing: 8px">TEMPORADA 1</text>
       </g>
-      <text x="548" y="178" writing-mode="tb" fill="#F4EDE0" style="font: 900 30px 'Zen Kaku Gothic New', sans-serif; letter-spacing: 4px">ピンピンポン</text>
-      <circle cx="96" cy="512" r="25" fill="#FFC629" stroke="#111" stroke-width="8"/>
+      <text x="592" y="150" writing-mode="tb" fill="#111" stroke="#FFFDF7" stroke-width="8" stroke-linejoin="round" paint-order="stroke" style="font: 900 34px 'Zen Kaku Gothic New', sans-serif; letter-spacing: 3px">ピンピンポン</text>
+      <circle cx="90" cy="250" r="24" fill="#FFC629" stroke="#111" stroke-width="8"/>
     </symbol>
     <symbol id="i-bean" viewBox="0 0 120 150">
       <path d="M60 10c27 0 45 19 45 46v46c0 22-18 38-45 38S15 124 15 102V56c0-27 18-46 45-46z" fill="currentColor" stroke="#22100F" stroke-width="7"/>
