@@ -121,7 +121,7 @@ const FOOT = 0.1;   // altura del cuerpo sobre el suelo (las zapatillas van deba
 function profileR(s, R, belly) {
   return R * Math.pow(Math.max(0, Math.sin(Math.PI * s)), 0.42) * (1 - 0.12 * s + belly * Math.exp(-(((s - 0.3) / 0.2) ** 2)));
 }
-function lathe(H, R, belly, { t = 0, s0 = 0, s1 = 1, extra = 0, n = 40 } = {}) {
+function lathe(H, R, belly, { t = 0, s0 = 0, s1 = 1, extra = 0, n = 40, phi0 = 0, phiLen = Math.PI * 2, seg = 44 } = {}) {
   const pts = [];
   for (let i = 0; i <= n; i++) {
     const s = s0 + (s1 - s0) * (i / n);
@@ -130,8 +130,10 @@ function lathe(H, R, belly, { t = 0, s0 = 0, s1 = 1, extra = 0, n = 40 } = {}) {
     const full = s0 === 0 && s1 === 1;
     pts.push(new THREE.Vector2(r, full ? -t + s * (H + 2 * t) : s * H));
   }
-  return new THREE.LatheGeometry(pts, 44);
+  return new THREE.LatheGeometry(pts, seg, phi0, phiLen);
 }
+// óvalo para parches: se estira sobre el sector del cuerpo, así sigue su curva a cualquier tamaño
+const ovalTex = (() => { let t = null; return () => t || (t = canvasTex(128, 128, (g) => { g.fillStyle = "#fff"; g.beginPath(); g.ellipse(64, 64, 60, 60, 0, 0, Math.PI * 2); g.fill(); })); })();
 
 function canvasTex(w, h, draw, rx = 1, ry = 1) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -205,8 +207,14 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   // ---- Cuerpo ----
   torso.add(mesh(own(lathe(H, R, belly)), toon(skinHex)));
   torso.add(new THREE.Mesh(own(lathe(H, R, belly, { t: 0.022 })), outlineMat));
-  const bellyPatch = mesh(own(new THREE.SphereGeometry(R * 0.62, 24, 16)), toon(lighten(skinHex, 0.4)), false);
-  bellyPatch.scale.set(1, 1.1, 0.35); bellyPatch.position.set(0, H * 0.32, surf(0.32) - R * 0.62 * 0.35 + 0.012);
+  // parche ovalado calcado sobre la superficie del cuerpo (sector frontal del torno): nunca sobresale ni se hunde
+  const skinPatch = (s0, s1, half, col, extra = 0.005) => {
+    const m = new THREE.Mesh(own(lathe(H, R, belly, { s0, s1, extra, n: 14, phi0: -half, phiLen: half * 2, seg: 16 })), own(new THREE.MeshToonMaterial({ color: col, map: ovalTex(), alphaTest: 0.5, gradientMap: toon(0xffffff).gradientMap })));
+    m.receiveShadow = true; return m;
+  };
+  // panel recto (sin óvalo) que también se calca sobre el cuerpo: delantales, petos, paneles
+  const surfPanel = (s0, s1, half, col, extra = 0.02) => { const m = mesh(own(lathe(H, R, belly, { s0, s1, extra, n: 12, phi0: -half, phiLen: half * 2, seg: 14 })), toon(col), false); return m; };
+  const bellyPatch = skinPatch(0.1, 0.5, 0.95, lighten(skinHex, 0.4));
 
   // ---- Pantalón ----
   const pants = look.pants || 'shorts';
@@ -259,8 +267,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     if (shirt === 'hoodie') {
       const hood = mesh(own(new THREE.TorusGeometry(surf(0.6) * 0.85, 0.07, 10, 30, Math.PI * 1.2)), toon(shirtHex));
       hood.rotation.set(Math.PI / 2 - 0.3, 0, Math.PI * 0.9); hood.position.set(0, H * 0.6, -0.04); torso.add(hood);
-      const pocket = mesh(own(new THREE.SphereGeometry(R * 0.5, 20, 12)), toon(shirtDark), false);
-      pocket.scale.set(1, 0.45, 0.25); pocket.position.set(0, H * 0.3, surf(0.3) + 0.012); torso.add(pocket);
+      torso.add(skinPatch(0.22, 0.38, 0.7, shirtDark, 0.03));
       for (const sx of [-1, 1]) { const cord = capsule(0.011, 0.08, 0xffffff, 0, false); cord.position.set(sx * 0.05, H * 0.55, surf(0.55) + 0.025); torso.add(cord); }
     }
     if (shirt === 'polo') {
@@ -288,8 +295,8 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     }
     if (shirt === 'spacesuit') {
       // traje espacial blanco: peto verde con botones de colores, cuello morado, franjas verdes
-      const panel = box(R * 0.95, H * 0.17, 0.04, 0x3fae3f, 0.008, false); panel.position.set(0, H * 0.4, zAt(0.4, 0) + 0.005); torso.add(panel);
-      const panelTop = box(R * 0.7, H * 0.05, 0.045, 0x7b4bd1, 0.006, false); panelTop.position.set(0, H * 0.5, zAt(0.5, 0) + 0.003); torso.add(panelTop);
+      torso.add(surfPanel(0.32, 0.48, 0.6, 0x3fae3f, 0.026));
+      torso.add(surfPanel(0.48, 0.53, 0.45, 0x7b4bd1, 0.028));
       [[0xe0352b, -1], [0x3b9bff, 0], [0x3fae3f, 1]].forEach(([col, k]) => { const b = sphere(0.022, col, 0.006, false); b.scale.z = 0.5; b.position.set(k * 0.06, H * 0.41, zAt(0.41, k * 0.06) + 0.05); torso.add(b); });
       ring(0.58, 0.04, accentHex, 0.022);
       ring(0.24, 0.022, 0x3fae3f, 0.02);
@@ -297,7 +304,7 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     if (shirt === 'overalls') {
       // peto con tirantes y botones dorados sobre la camiseta
       const bib = mesh(own(lathe(H, R, belly, { s0: 0.18, s1: 0.42, extra: 0.024, n: 10 })), toon(shirtHex)); torso.add(bib);
-      const front = box(R * 0.9, H * 0.16, 0.03, shirtHex, 0.008, false); front.position.set(0, H * 0.48, zAt(0.48, 0) - 0.005); torso.add(front);
+      torso.add(surfPanel(0.4, 0.56, 0.62, shirtHex, 0.028));
       for (const sx of [-1, 1]) {
         const strap = mesh(own(new THREE.TorusGeometry(R * 0.55, 0.022, 8, 24, Math.PI)), toon(shirtHex), false);
         strap.rotation.y = Math.PI / 2; strap.position.set(sx * R * 0.32, H * 0.5, 0); strap.scale.set(1, 0.6, 1); torso.add(strap);
@@ -334,9 +341,9 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       }
     }
     if (shirt === 'apron') {
-      const ap = box(R * 1.15, H * 0.36, 0.03, accentHex, 0.008, false); ap.position.set(0, H * 0.3, zAt(0.3, 0) + 0.012); torso.add(ap);
-      const bib = box(R * 0.7, H * 0.14, 0.03, accentHex, 0.008, false); bib.position.set(0, H * 0.5, zAt(0.5, 0) + 0.004); torso.add(bib);
-      const pk = box(R * 0.5, H * 0.07, 0.035, darken(accentHex, 0.15), 0.005, false); pk.position.set(0, H * 0.25, zAt(0.25, 0) + 0.03); torso.add(pk);
+      torso.add(surfPanel(0.1, 0.46, 0.85, accentHex, 0.026));
+      torso.add(surfPanel(0.44, 0.56, 0.5, accentHex, 0.026));
+      torso.add(surfPanel(0.2, 0.3, 0.45, darken(accentHex, 0.15), 0.034));
       ring(0.3, 0.014, accentHex, 0.02);
     }
     if (shirt === 'sailor') {
