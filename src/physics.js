@@ -134,7 +134,7 @@ export function solveShot(st, tg, T, w) {
   let vx = (tg.x - st.x) / T, vz = (tg.z - st.z) / T;
   let vy = (ty - st.y + 0.5 * GRAV * T * T) / T;
   for (let k = 0; k < 6; k++) {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 14; i++) {
       const r = flight(st, vx, vy, vz, w);
       if (!r) { vz *= 1.15; vx *= 1.15; continue; }
       const ex = tg.x - r.x, ez = tg.z - r.z;

@@ -130,6 +130,39 @@ export function createFX(scene) {
   land.rotation.x = -Math.PI / 2; land.visible = false; scene.add(land);
   fx.land = land;
 
+  // ---- Aura de efecto (tiro perfecto con mucho efecto) ----
+  // dos anillos finos que giran sobre el eje de rotación de la bola + chispitas en órbita
+  const aura = new THREE.Group(); aura.visible = false; scene.add(aura);
+  const auraMat = (add = false) => new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const ringA = new THREE.Mesh(new THREE.TorusGeometry(R * 2.3, R * 0.13, 6, 40), auraMat());
+  const ringB = new THREE.Mesh(new THREE.TorusGeometry(R * 3.1, R * 0.09, 6, 40, Math.PI * 1.3), auraMat());
+  aura.add(ringA, ringB);
+  const sparks = [];
+  const sg = new THREE.SphereGeometry(R * 0.28, 8, 6);
+  for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(sg, auraMat(true)); aura.add(m); sparks.push(m); }
+  const ghost = new THREE.Mesh(new THREE.SphereGeometry(R * 1.55, 16, 12), auraMat());
+  aura.add(ghost);
+  const axis = new THREE.Vector3(), up = new THREE.Vector3(0, 0, 1);
+  let auraK = 0, auraSpin = 0;
+  // pos: posición de la bola · w: vector de efecto · k: intensidad 0..1 · color
+  fx.spinAura = (pos, w, k, color) => {
+    auraK += (k - auraK) * 0.25;
+    if (auraK < 0.02) { aura.visible = false; return; }
+    aura.visible = true; aura.position.copy(pos);
+    axis.set(w.x, w.y, w.z); const om = axis.length();
+    if (om > 1e-3) aura.quaternion.setFromUnitVectors(up, axis.multiplyScalar(1 / om));
+    auraSpin += Math.min(om, 160) * 0.0011;
+    ringA.rotation.z = auraSpin; ringB.rotation.z = -auraSpin * 1.6;
+    sparks.forEach((s, i) => {
+      const a = auraSpin * 2.2 + (i / sparks.length) * Math.PI * 2, r = R * (2.4 + (i % 2) * 0.7);
+      s.position.set(Math.cos(a) * r, Math.sin(a) * r, Math.sin(a * 2 + i) * R * 0.6);
+    });
+    for (const m of [ringA, ringB, ghost, ...sparks]) m.material.color.set(color);
+    ringA.material.opacity = 0.7 * auraK; ringB.material.opacity = 0.45 * auraK;
+    ghost.material.opacity = 0.18 * auraK;
+    sparks.forEach(s => { s.material.opacity = 0.9 * auraK; });
+  };
+
   fx.update = (dt, camera, t) => {
     for (const r of rings) {
       if (r.life <= 0) { r.m.visible = false; continue; }

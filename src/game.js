@@ -543,6 +543,8 @@ function launch(c, start, tg, vh, top, side, q, serve, smash, type, power) {
   let T = dist / vh;
   if (!serve) T *= 1 + (1 - q) * 0.45;     // mala sincronía = bola alta y lenta
   const ux = dx / dist, uz = dz / dist;
+  // golpe perfecto = la bola sale con un extra de efecto (se nota en la parábola y la comba)
+  if (!serve && !smash && q > 0.75) { top *= 1.2; side *= 1.25; }
   const w = { x: top * uz, y: side, z: -top * ux };   // liftado/cortado alrededor de (up × dir)
   const v = P.solveShot(start, tg, T, w);
   if (!serve && q < 0.25 && Math.random() < 0.5) v.vy -= (0.25 - q) * 4 * Math.random();

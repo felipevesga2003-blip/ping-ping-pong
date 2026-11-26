@@ -10,10 +10,10 @@ export const R = 0.03;            // radio de bola (agrandado para legibilidad)
 // Física
 export const GRAV = 9.0;
 export const KD = 0.012;          // arrastre aerodinámico
-export const KM = 0.0065;         // efecto Magnus
-export const SPIN_DECAY = 0.25;
+export const KM = 0.0092;         // efecto Magnus (exagerado a propósito: más parábola y más comba)
+export const SPIN_DECAY = 0.2;
 export const REST = 0.9;          // restitución mesa
-export const TFRIC = 0.25;        // fricción mesa (acopla efecto ↔ velocidad)
+export const TFRIC = 0.28;        // fricción mesa (acopla efecto ↔ velocidad)
 export const STEP = 1 / 240;      // paso fijo de simulación
 export const TIME_SCALE = 0.8;    // ritmo arcade (un poco más lento que la realidad)
 

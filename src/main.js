@@ -639,6 +639,9 @@ onEvent((type, d) => {
     }
     if (d.grade === 'perfect') {
       SFX.perfect();
+      const hb = G.ball, om = Math.hypot(hb.wx, hb.wy, hb.wz);
+      const human = roster[d.c] && roster[d.c].ctrl !== 'ai';
+      if (human && !d.serve && !d.smash && om > 80) { aura = { id: hb.hitId, k: Math.min(1, (om - 60) / 80), color: Math.abs(hb.wy) > 55 ? 0x5dffb0 : d.type === 'back' ? 0x7fd8ff : 0xffc44d }; fx.ring(pos, aura.color, 0.32); }
       if (d.c === 0 && !G.demo) { pop3D('¡PERFECTO!', pos.clone().add(tmpV.set(0, 0.25, 0)), 'perfect'); hitstop = Math.max(hitstop, 0.05); }
     } else if (d.grade === 'weak' && d.c === 0 && !G.demo) pop3D('flojo…', pos, 'weak');
     if (Math.abs(d.side) > 50 && !G.demo) pop3D('¡CURVA!', pos.clone().add(tmpV.set(0, -0.2, 0)), 'curve');
@@ -1092,6 +1095,7 @@ function drawOverlay() {
 
 // ---------- Bucle ----------
 const fadeO = [1, 1, 1, 1];
+let aura = null;   // { id: golpe, k: intensidad, color }
 const spinQ = new THREE.Quaternion(), spinAxis = new THREE.Vector3();
 let last = performance.now();
 function frame(now) {
@@ -1138,8 +1142,12 @@ function frame(now) {
   const visible = (b.live || G.phase === 'serve') && !pose;
   ballView.visible = visible;
   const flying = visible && G.phase !== 'serve' && Math.hypot(b.vx, b.vy, b.vz) > 1.5;
-  fx.trail(ballPos, b.kind === 'smash' ? 0xff5a3d : b.kind === 'back' ? 0x6bc8ff : 0xffb020, flying);
+  fx.trail(ballPos, aura && aura.id === b.hitId ? aura.color : b.kind === 'smash' ? 0xff5a3d : b.kind === 'back' ? 0x6bc8ff : 0xffb020, flying);
   fx.ballShadow(ballPos);
+  // aura del tiro perfecto: dura mientras la bola conserva el efecto (hasta el siguiente golpe)
+  if (aura && (aura.id !== b.hitId || !visible)) aura = null;
+  const om2 = Math.hypot(b.wx, b.wy, b.wz);
+  fx.spinAura(ballPos, { x: b.wx, y: b.wy, z: b.wz }, aura ? aura.k * Math.min(1, om2 / 70) : 0, aura ? aura.color : 0xffffff);
 
   updateCamera(dt);
   updateAim();
