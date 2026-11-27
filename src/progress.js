@@ -34,7 +34,7 @@ export const PAD_SKILLS = {
 // Hitos del árbol: al llegar a estos niveles el nodo es "especial" (solo visual + nombre)
 export const MILESTONES = { 3: 'Experto', 5: 'Maestro' };
 
-const newPaddle = (i) => ({ name: `Pala ${i + 1}`, type: 'balanced', color: PADDLE_COLORS[[0, 2, 3][i]], up: { speed: 0, spin: 0, ctrl: 0, smash: 0 } });
+const newPaddle = (i) => ({ name: `Pala ${i + 1}`, type: 'balanced', color: PADDLE_COLORS[[0, 2, 3][i]], wood: ['#e3b47a', '#c99a5e', '#f0d6a8'][i], up: { speed: 0, spin: 0, ctrl: 0, smash: 0 } });
 function fresh() {
   return {
     v: 1, named: false, coins: WELCOME_COINS, earned: 0, owned: {},
@@ -70,7 +70,7 @@ export function sanitizeLook(look) {
   const L = { ...look };
   for (const k of LOCK_CATS) if (!isOwned(k, L[k])) L[k] = isOwned(k, DEFAULT_LOOK[k]) ? DEFAULT_LOOK[k] : FREE[k][0];
   const pad = P.paddles[P.active];
-  L.paddleType = isOwned('paddle', pad.type) ? pad.type : 'balanced'; L.paddleColor = pad.color;
+  L.paddleType = isOwned('paddle', pad.type) ? pad.type : 'balanced'; L.paddleColor = pad.color; L.paddleWood = pad.wood; L.paddleDesign = P.active;
   return L;
 }
 // comprar un outfit desbloquea también todas sus prendas

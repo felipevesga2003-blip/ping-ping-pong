@@ -242,7 +242,7 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane, o
   function stripLocked() {
     if (!lockedIn(look()).length) return false;
     const s = sanitizeLook(look());
-    for (const k of Object.keys(s)) if (k !== 'paddleType' && k !== 'paddleColor') look()[k] = s[k];
+    for (const k of Object.keys(s)) if (!['paddleType', 'paddleColor', 'paddleWood', 'paddleDesign'].includes(k)) look()[k] = s[k];
     tryOutfit = null; return true;
   }
   const swRow = (k, label, list, extra = '') => `<div class="swatch-row"><span>${label}</span><div class="swatches" data-k="${k}">${extra}${list.map(c => `<button class="sw${look()[k] === c ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>`;
@@ -276,7 +276,7 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane, o
     const of = e.target.closest('.outfit');
     if (of) {
       const o = OUTFITS.find(x => x.id === of.dataset.o);
-      const keep = { name: look().name, number: look().number, height: look().height, width: look().width, paddleType: look().paddleType, paddleColor: look().paddleColor };
+      const keep = { name: look().name, number: look().number, height: look().height, width: look().width, paddleType: look().paddleType, paddleColor: look().paddleColor, paddleWood: look().paddleWood, paddleDesign: look().paddleDesign };
       Object.assign(look(), DEFAULT_LOOK, { skin: look().skin }, o.look, keep); tryOutfit = o.id; lookChanged(); blip();
       of.classList.add('pop'); setTimeout(() => of.classList.remove('pop'), 350);
     }

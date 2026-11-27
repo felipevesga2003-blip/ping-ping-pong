@@ -14,6 +14,12 @@ export const SKINS = ['#4da8ff', '#5fd3a4', '#ffd166', '#b39cff', '#ff9f6b', '#8
 export const SHIRT_COLORS = ['#ffc93c', '#ff5a6e', '#3ee0b0', '#ffffff', '#2d2366', '#ff8a3d', '#8b6cff', '#3b9bff', '#e0352b', '#2f5bd3', '#8a8f98', '#1c1c24'];
 export const PANTS_COLORS = ['#2c3a66', '#1c1c24', '#e0352b', '#2f5bd3', '#6b4a2b', '#8a8f98', '#ffffff', '#3e7b3a'];
 export const PADDLE_COLORS = ['#f03e3e', '#1c1c24', '#2f6bff', '#2fbf71', '#8b6cff', '#ff8a3d', '#ff5fb2', '#e8b931'];
+// tonos de madera para hoja y mango, y diseño de cada una de las 3 palas del Taller
+export const PADDLE_WOODS = [
+  { c: '#f0d6a8', name: 'Arce' }, { c: '#e3b47a', name: 'Haya' }, { c: '#c99a5e', name: 'Roble' },
+  { c: '#b86a45', name: 'Cerezo' }, { c: '#8a5a34', name: 'Nogal' }, { c: '#4a3022', name: 'Wengué' },
+];
+export const PADDLE_DESIGNS = ['Clásica', 'Pro', 'Bicolor'];
 export const HEIGHTS = [[0.86, 'Bajito'], [1, 'Normal'], [1.12, 'Alto'], [1.24, 'Altísimo']];
 export const WIDTHS = [[0.86, 'Delgado'], [1, 'Normal'], [1.16, 'Gordito'], [1.32, 'Rechoncho']];
 export const EYES = [['normal', 'Normales'], ['sleepy', 'Entrecerrados'], ['happy', 'Felices'], ['drunk', 'Borracho'], ['red', 'Rojos'],
@@ -38,7 +44,7 @@ export const BACKS = [['none', 'Nada'], ['cape', 'Capa'], ['backpack', 'Mochila'
 export const DEFAULT_LOOK = {
   name: 'Tú', skin: '#4da8ff', height: 1, width: 1, eyes: 'normal', ears: 'none', shirt: 'tee', shirtColor: '#ffc93c',
   pants: 'shorts', pantsColor: '#2c3a66', shoes: '#ffffff', hat: 'capback', hatColor: null, glasses: 'none', face: 'none', neck: 'none', back: 'none',
-  accent: '#e0352b', hairColor: '#5b3a29', gloves: null, paddleType: 'balanced', paddleColor: '#f03e3e', number: 7,
+  accent: '#e0352b', hairColor: '#5b3a29', gloves: null, paddleType: 'balanced', paddleColor: '#f03e3e', paddleWood: '#e3b47a', paddleDesign: 0, number: 7,
 };
 export const CPU_SHIRT = '#ff5a6e';
 
@@ -111,7 +117,7 @@ export function randomLook(name = 'Tú') {
     shirt: pick(SHIRTS.slice(0, 11))[0], shirtColor: pick(SHIRT_COLORS), pants: pick(PANTS)[0], pantsColor: pick(PANTS_COLORS),
     hat: pick(HATS)[0], hatColor: Math.random() < 0.5 ? pick(SHIRT_COLORS) : null, glasses: maybe(GLASSES, 0.35), face: maybe(FACES, 0.3),
     neck: maybe(NECKS, 0.3), back: maybe(BACKS, 0.2), accent: pick(SHIRT_COLORS), hairColor: pick(['#3a2416', '#e07a2b', '#f2eee6', '#ff5fb2', '#2b2420', '#e8b931']),
-    paddleColor: pick(PADDLE_COLORS), number: 1 + Math.floor(Math.random() * 99),
+    paddleColor: pick(PADDLE_COLORS), paddleWood: pick(PADDLE_WOODS).c, paddleDesign: Math.floor(Math.random() * 3), number: 1 + Math.floor(Math.random() * 99),
   };
 }
 
@@ -964,11 +970,11 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   for (let i = 1; i <= 8; i++) blade2.push(q([lx, ly], [-tw * 1.25, yT + 0.012], [-tw, yT], i / 8));
   for (let i = 0; i < 8; i++) blade2.push(q([tw, yT], [tw * 1.25, yT + 0.012], [-lx, ly], i / 8));
   ccw(blade2);
-  // goma: la hoja recortada sobre el cuello (línea recta) y metida un poco hacia dentro (se ve el canto de madera)
+  // goma: cubre la hoja hasta el borde (la madera solo se ve de canto) y se corta en recto sobre el cuello
   const yR = PCY - pb * 0.8;
   const clipY = (pts, y0) => { const out = []; for (let i = 0; i < pts.length; i++) { const p = pts[i], n = pts[(i + 1) % pts.length], pi = p[1] >= y0, ni = n[1] >= y0; if (pi) out.push(p); if (pi !== ni) { const f = (y0 - p[1]) / (n[1] - p[1]); out.push([p[0] + (n[0] - p[0]) * f, y0]); } } return out; };
-  const rubber2 = offsetPts(clipY(blade2, yR), -0.0035);
-  const wood = ptype === 'power' ? 0x8a5a2b : 0xe3b47a;
+  const rubber2 = offsetPts(clipY(blade2, yR), 0.0011);
+  const wood = new THREE.Color(look.paddleWood || '#e3b47a').getHex(), design = +look.paddleDesign || 0;
   paddle.add(piece(blade2, woodT, wood, 0.0012));
   const rubT = 0.0025, zR = woodT / 2 + 0.0012 + rubT / 2;
   const rubFront = piece(rubber2, rubT, rubber, 0, false); rubFront.position.z = zR; paddle.add(rubFront);
@@ -976,9 +982,29 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   // mango abocinado (FL): más ancho en el extremo, con franja de agarre del color de la goma
   const yTop = yT + 0.014, yE = -0.055;
   const handle2 = ccw([[-0.021, yTop], [-0.0165, yT - 0.012], [-0.0155, yT - 0.035], [-0.0165, -0.02], [-0.021, yE + 0.016], [-0.017, yE], [0.017, yE], [0.021, yE + 0.016], [0.0165, -0.02], [0.0155, yT - 0.035], [0.0165, yT - 0.012], [0.021, yTop]]);
-  paddle.add(piece(handle2, 0.02, ptype === 'power' ? 0x3a2416 : wood, 0.003));
-  const grip2 = ccw([[-0.0085, 0.028], [-0.009, -0.02], [-0.0115, yE + 0.012], [0.0115, yE + 0.012], [0.009, -0.02], [0.0085, 0.028]]);
-  const grip = piece(grip2, 0.0275, ptype === 'power' ? 0x1d1d22 : darken(rubber, 0.15), 0.0015, false); paddle.add(grip);
+  paddle.add(piece(handle2, 0.02, wood, 0.003));
+  // Diseño de cada pala (en el mango y algo visible en la goma, porque la mano tapa casi todo el mango)
+  const zFace = zR + rubT / 2 + 0.0006, accentCol = darken(rubber, 0.15);
+  const rect = (x0, y0, x1, y1) => ccw([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
+  const onFaces = (pts, col) => { for (const s of [1, -1]) { const m = piece(pts, 0.0006, col, 0, false); m.position.z = s * zFace; paddle.add(m); } };
+  if (design === 0) {
+    // Clásica: franja de agarre y etiqueta rectangular abajo a la izquierda
+    const grip2 = ccw([[-0.0085, 0.028], [-0.009, -0.02], [-0.0115, yE + 0.012], [0.0115, yE + 0.012], [0.009, -0.02], [0.0085, 0.028]]);
+    paddle.add(piece(grip2, 0.0275, accentCol, 0.0015, false));
+    onFaces(rect(-pa * 0.62, yR + 0.008, -pa * 0.12, yR + 0.024), 0xf2eadb);
+  } else if (design === 1) {
+    // Pro: collar y remate del color de la goma, línea fina sobre el corte de la goma
+    paddle.add(piece(rect(-0.0215, yTop - 0.012, 0.0215, yTop + 0.001), 0.0285, rubber, 0.0012, false));
+    paddle.add(piece(ccw([[-0.0225, yE + 0.014], [-0.018, yE - 0.002], [0.018, yE - 0.002], [0.0225, yE + 0.014]]), 0.0285, rubber, 0.0012, false));
+    onFaces(rect(-pa * 0.78, yR + 0.014, pa * 0.78, yR + 0.018), 0xf2eadb);
+    onFaces(rect(-0.004, yR + 0.009, 0.004, yR + 0.023), 0xf2eadb);
+  } else {
+    // Bicolor: mango forrado en oscuro con franja de madera y sello redondo en la goma
+    paddle.add(piece(ccw([[-0.0175, 0.01], [-0.0168, -0.02], [-0.0215, yE + 0.016], [-0.0175, yE - 0.001], [0.0175, yE - 0.001], [0.0215, yE + 0.016], [0.0168, -0.02], [0.0175, 0.01]]), 0.026, 0x1d1d22, 0.0018, false));
+    paddle.add(piece(rect(-0.004, yE + 0.006, 0.004, 0.006), 0.0305, wood, 0.0008, false));
+    const seal = own(new THREE.CircleGeometry(0.011, 20));
+    for (const s of [1, -1]) { const m = mesh(seal, toon(0xf2eadb), false); m.position.set(0, yR + 0.02, s * (zFace + 0.0003)); if (s < 0) m.rotation.y = Math.PI; paddle.add(m); }
+  }
   if (ptype === 'spin') {   // espiral decorativa
     const sp = mesh(own(new THREE.TorusGeometry(bladeR * 0.55, 0.008, 6, 24, Math.PI * 1.5)), toon(0xffffff), false);
     sp.position.set(0, PCY + 0.005, zR + rubT / 2 + 0.0008); paddle.add(sp);

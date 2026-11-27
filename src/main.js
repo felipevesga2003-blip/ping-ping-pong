@@ -95,6 +95,7 @@ function syncPaddleLook() {
   const p = PR.paddles[PR.active];
   settings.look.paddleType = isOwned('paddle', p.type) ? p.type : 'balanced';
   settings.look.paddleColor = p.color;
+  settings.look.paddleWood = p.wood; settings.look.paddleDesign = PR.active;   // cada pala tiene su diseño
 }
 syncPaddleLook();
 const playLook = () => sanitizeLook(settings.look);   // lo que ven los demás y lo que se juega (sin prendas por comprar)

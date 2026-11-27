@@ -773,3 +773,6 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 /* la cinta de controles va pegada al borde inferior, por debajo de la escalera del menú */
 .prompts { top: auto; bottom: 1.4vh; height: 36px; }
 .menu-panel { bottom: calc(1.4vh + 46px); }
+
+/* la pala del Taller: mango del tono de madera elegido */
+.pad-swatch::after { background: var(--w, var(--paper-2)); }

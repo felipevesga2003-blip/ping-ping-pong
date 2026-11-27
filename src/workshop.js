@@ -3,7 +3,7 @@
 //  las 3 palas (tipo, color, nombre y mejoras con Pongcoins)
 // =============================================================
 import { PADDLES } from './config.js';
-import { PADDLE_COLORS } from './character.js';
+import { PADDLE_COLORS, PADDLE_WOODS, PADDLE_DESIGNS } from './character.js';
 import { P, PRICE, MAX_LV, SKILLS, PAD_SKILLS, MILESTONES, isOwned, buySkill, buyPadSkill, buyPadType, padStats, boosts, charLevel, save } from './progress.js';
 
 const $ = id => document.getElementById(id);
@@ -49,13 +49,15 @@ export function createWorkshop(cb) {
     }).join('');
     const bars = Object.keys(PAD_SKILLS).map(k => `<i class="stat"><em>${PAD_SKILLS[k].name}</em><u style="width:${Math.min(100, Math.round(((eff[k] - 0.8) / 0.9) * 100))}%"></u></i>`).join('');
     return `<div class="pad-head">
-        <i class="pad-swatch" style="--c:${esc(p.color)}"></i>
+        <i class="pad-swatch" style="--c:${esc(p.color)};--w:${esc(p.wood || '#e3b47a')}"></i>
         <label class="field grow"><span>Nombre de la pala</span><input id="padName" maxlength="14" spellcheck="false" autocomplete="off" value="${esc(p.name)}"></label>
         <button class="use-btn${P.active === i ? ' on' : ''}" id="padUse">${P.active === i ? 'En uso' : 'Usar esta'}</button>
       </div>
       <div class="ws-label">Tipo de pala</div>
       <div class="pt-grid">${types}</div>
+      <div class="ws-label">Diseño · ${PADDLE_DESIGNS[i]}</div>
       <div class="swatch-row"><span>Goma</span><div class="swatches" data-k="padColor">${PADDLE_COLORS.map(c => `<button class="sw${p.color === c ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
+      <div class="swatch-row"><span>Madera</span><div class="swatches" data-k="padWood">${PADDLE_WOODS.map(w => `<button class="sw${p.wood === w.c ? ' on' : ''}" data-c="${w.c}" style="background:${w.c}" title="${w.name}" aria-label="${w.name}"></button>`).join('')}</div></div>
       <div class="ws-label">Mejoras de esta pala</div>
       ${tree(PAD_SKILLS, p.up, 'pad')}
       <div class="pad-bars">${bars}</div>`;
@@ -89,7 +91,7 @@ export function createWorkshop(cb) {
       return;
     }
     const sw = e.target.closest('.sw');
-    if (sw) { P.paddles[slot()].color = sw.dataset.c; save(); render(); cb.onPaddle(); cb.blip(); return; }
+    if (sw) { const k = sw.closest('.swatches').dataset.k === 'padWood' ? 'wood' : 'color'; P.paddles[slot()][k] = sw.dataset.c; save(); render(); cb.onPaddle(); cb.blip(); return; }
     if (e.target.closest('#padUse')) { P.active = slot(); save(); render(); cb.onPaddle(); cb.blip(); }
   });
   $('wsContent').addEventListener('input', e => {
