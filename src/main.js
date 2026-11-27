@@ -85,6 +85,9 @@ const tmpV = new THREE.Vector3();
 const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', realism: 'arcade', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1, fov: 66, dynFov: 1 };
 // El modo realista obliga a jugar con mano libre (sin tocar la preferencia guardada del jugador)
 let matchReal = false;
+// Ayudas visuales: en Realista empiezan apagadas en cada partido (más inmersivo) y la V las enciende/apaga
+let realAids = false;
+const aidsOn = () => (matchReal ? realAids : !!+settings.aids);
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
@@ -164,7 +167,7 @@ function show(id, on) { $(id).classList.toggle('hidden', !on); }
 const ctrlKey = () => (matchReal ? 'real' : settings.control);
 function showRealTag() {
   if (!matchReal) return;
-  const tag = $('camTag'); tag.textContent = 'Modo realista · mano libre'; tag.classList.add('on'); camTagTimer = 2.4;
+  const tag = $('camTag'); tag.textContent = 'Modo realista · sin ayudas (V)'; tag.classList.add('on'); camTagTimer = 2.6;
 }
 function enterGame() {
   initAudio(); SFX.select();
@@ -181,7 +184,7 @@ function startGame() {
   arena.setStage(resolveStage(settings.stage, arena.stage)); setAmbient(arena.stage);
   buildViews();
   newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal });
-  showRealTag(); if (matchReal) camZoom = 0;   // el realista arranca en 1ª persona (la rueda la cambia)
+  realAids = false; showRealTag(); if (matchReal) camZoom = 0;   // el realista arranca en 1ª persona y sin ayudas
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
@@ -312,7 +315,7 @@ function startOnline(m) {
     online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
     firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal,
   });
-  showRealTag(); if (matchReal) camZoom = 0;
+  realAids = false; showRealTag(); if (matchReal) camZoom = 0;
   if (DEBUG === 'bot') G.chars[0].ai = true;
   refreshHUD();
 }
@@ -698,7 +701,10 @@ function refreshHUD() {
   $('srv1').classList.toggle('on', st === 1 && G.phase !== 'over');
 }
 function bump(id) { const e = $(id); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
-function hint(html) { $('hint').innerHTML = html; $('hint').classList.toggle('on', !!html); }
+function hint(html) {
+  if (html && !aidsOn() && /anillo/.test(html)) html = '';   // sin ayudas no hay anillo del que hablar
+  $('hint').innerHTML = html; $('hint').classList.toggle('on', !!html);
+}
 // rojizos (rival, fallos, fuego) → rojo; todo lo demás → amarillo
 function palAcc(hex) {
   const c = new THREE.Color(hex), hsl = {}; c.getHSL(hsl);
@@ -984,6 +990,13 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { toggleMute(); refreshMute(); return; }
   // P (o H) oculta / muestra el panel de controles durante el partido
   if (e.code === 'KeyP' || e.code === 'KeyH') { $('controls').classList.toggle('off'); return; }
+  // V: ayudas visuales (en Realista solo para este partido; en Arcade cambia el ajuste)
+  if (e.code === 'KeyV' && screen === 'game' && !G.demo) {
+    if (matchReal) realAids = !realAids; else { settings.aids = +settings.aids ? 0 : 1; applySettings(); }
+    if (!aidsOn()) hint('');
+    const tag = $('camTag'); tag.textContent = 'Ayudas visuales: ' + (aidsOn() ? 'sí' : 'no'); tag.classList.add('on'); camTagTimer = 1.4;
+    SFX.blip(); return;
+  }
   if (prelobbyOpen()) {
     if (e.code === 'Enter') prelobbyGo(); else if (e.code === 'Escape') show('prelobby', false);
     return;
@@ -1295,7 +1308,7 @@ function drawOverlay() {
     octx.strokeStyle = '#22100F'; octx.lineWidth = w + 4; octx.stroke();
     octx.strokeStyle = color; octx.lineWidth = w; octx.stroke();
   };
-  if (free() && +settings.aids) {
+  if (free() && aidsOn()) {
     // Mano libre: dónde cruzará la bola el plano de la pala
     const h = G.hand;
     if (G.phase === 'rally' && b.lastHitter === 1) {
@@ -1315,7 +1328,7 @@ function drawOverlay() {
     }
     return;
   }
-  if (+settings.aids && G.phase === 'rally' && b.lastHitter === 1 && c.swing <= 0 && !c.pending) {
+  if (aidsOn() && G.phase === 'rally' && b.lastHitter === 1 && c.swing <= 0 && !c.pending) {
     const r = P.simToPlane(b, paddleZ(c), c.sign, 0, b.count === 1, 1.2);
     if (r && r.ok && r.t < 1.1) {
       const s = toScreen(tmpV.set(r.x, r.y, r.z));
@@ -1410,7 +1423,7 @@ function frame(now) {
   fx.reticle.visible = human && !free() && (G.phase === 'rally' || (G.phase === 'serve' && G.server === 0));
   fx.reticle.position.set(G.aim.x, C.TABLE_H + 0.002, G.aim.z);
   let landOn = false;
-  if (human && +settings.aids && G.phase === 'rally' && b.lastHitter === 1 && b.count === 0) {
+  if (human && aidsOn() && G.phase === 'rally' && b.lastHitter === 1 && b.count === 0) {
     const lb = P.predictBounce(b);
     if (lb && lb.z > 0) { fx.land.position.set(lb.x, C.TABLE_H + 0.003, lb.z); landOn = true; }
   }
