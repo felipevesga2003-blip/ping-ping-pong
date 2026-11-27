@@ -790,3 +790,13 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .fov-prev .fp-tag u { text-decoration: none; color: var(--yellow); margin-left: 4px; }
 .fov-prev .fp-tag.t3 { top: 0; } .fov-prev .fp-tag.t1 { top: calc(50% + 1px); }
 @media (max-width: 900px) { .fov-prev { display: none; } }
+
+/* Outfits: miniatura real del personaje sobre un pequeño sol */
+.outfit .o-stage { position: relative; display: block; width: 100%; height: 92px; margin-top: 2px;
+  background: radial-gradient(circle at 50% 60%, rgba(232, 48, 31, .16) 0 31px, transparent 32px); }
+.outfit .o-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: translateY(4px) scale(.96); transition: opacity .25s var(--ease), transform .35s var(--snap); }
+.outfit .o-thumb.on { opacity: 1; transform: none; }
+.outfit:hover .o-thumb.on { transform: translateY(-3px) scale(1.05); }
+.outfit:hover .o-stage { background: radial-gradient(circle at 50% 60%, rgba(232, 48, 31, .9) 0 31px, transparent 32px); }
+.outfit:has(.lock-badge) .o-thumb.on { filter: saturate(.75); }
+.outfit b { margin-top: 2px; }

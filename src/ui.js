@@ -9,6 +9,16 @@ const HAIR_COLORS = ['#3a2416', '#5b3a29', '#2b2420', '#e07a2b', '#e8b931', '#f2
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const $ = id => document.getElementById(id);
+// Miniaturas reales de los outfits (las genera main.js renderizando el personaje; aquí solo se piden y se muestran)
+export const OUTFIT_THUMBS = {};   // id → { key, url }
+let thumbProvider = null;
+export function setThumbProvider(fn) { thumbProvider = fn; }
+const thumbKey = (o, L) => (o.look.skin || L.skin) + '|' + (o.look.eyes || L.eyes);
+function thumbImg(o, L) {
+  const t = OUTFIT_THUMBS[o.id], key = thumbKey(o, L);
+  if ((!t || t.key !== key) && thumbProvider) thumbProvider(o, L, key);
+  return `<span class="o-stage"><img class="o-thumb${t && t.key === key ? ' on' : ''}" data-ot="${o.id}" alt="" src="${t ? t.url : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}"></span>`;
+}
 
 // Datos de controles (única fuente para el menú y el panel en partida)
 export const CONTROLS = {
@@ -251,7 +261,7 @@ export function createMenu({ settings, onChange, onPlay, blip, onLook, onPane, o
     body: { name: 'Cuerpo', html: () => swRow('skin', 'Piel', SKINS) + `<div class="cgrid">${sel3('height', 'Altura')}${sel3('width', 'Complexión')}${sel3('eyes', 'Ojos')}${sel3('ears', 'Orejas')}</div>` },
     clothes: { name: 'Ropa', html: () => `<div class="cgrid">${sel3('shirt', 'Parte de arriba')}${sel3('pants', 'Pantalón')}</div>` + swRow('shirtColor', 'Equipación', SHIRT_COLORS) + swRow('pantsColor', 'Pantalón', PANTS_COLORS) + swRow('accent', 'Secundario', SHIRT_COLORS) + swRow('shoes', 'Zapatos', ['#ffffff', '#1c1c24', '#e0352b', '#2547b8', '#6b4a2b', '#7b4bd1', '#ffc93c', '#3fae3f']) },
     acc: { name: 'Accesorios', html: () => `<div class="cgrid">${sel3('hat', 'Sombrero')}${sel3('glasses', 'Gafas')}${sel3('face', 'Cara')}${sel3('neck', 'Cuello')}${sel3('back', 'Espalda')}</div>` + swRow('hatColor', 'Sombrero', SHIRT_COLORS, autoSw('hatColor', 'Auto')) + swRow('hairColor', 'Pelo', HAIR_COLORS) + swRow('gloves', 'Guantes', ['#ffffff', '#1c1c24', '#e0352b', '#ffc93c'], autoSw('gloves', 'Sin')) },
-    outfits: { name: 'Outfits', html: () => `<div class="outfit-grid">${OUTFITS.map(o => `<button class="outfit" data-o="${o.id}"><svg class="bean" style="color:${o.look.skin || look().skin}"><use href="#i-bean"/></svg><i class="o-shirt" style="background:${o.look.shirt === 'none' ? (o.look.pantsColor || '#2c3a66') : o.look.shirt === 'overalls' ? o.look.shirtColor : o.look.shirtColor || '#fff'}"></i><b>${o.name}</b>${isOwned('outfit', o.id) ? '' : `<i class="lock-badge"><svg><use href="#i-lock"/></svg>${PRICE}</i>`}</button>`).join('')}</div><p class="outfit-note">Un clic te lo prueba. Comprar un outfit (${PRICE} Pongcoins) desbloquea todas sus prendas.</p>` },
+    outfits: { name: 'Outfits', html: () => `<div class="outfit-grid">${OUTFITS.map(o => `<button class="outfit" data-o="${o.id}">${thumbImg(o, look())}<b>${o.name}</b>${isOwned('outfit', o.id) ? '' : `<i class="lock-badge"><svg><use href="#i-lock"/></svg>${PRICE}</i>`}</button>`).join('')}</div><p class="outfit-note">Un clic te lo prueba. Comprar un outfit (${PRICE} Pongcoins) desbloquea todas sus prendas.</p>` },
   };
   function renderChar() {
     $('charTabs').innerHTML = Object.entries(TABS).map(([id, t]) => `<button data-t="${id}" class="${id === charTab ? 'on' : ''}">${t.name}</button>`).join('');

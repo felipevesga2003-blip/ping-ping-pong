@@ -15,7 +15,7 @@ import { createArena } from './arena.js';
 import { createReferee } from './referee.js';
 import { createFX } from './fx.js';
 import { initAudio, SFX, toggleMute, isMuted, setSfxEnabled, setMusicVolume, setSfxVolume, setAmbient } from './audio.js';
-import { createMenu, renderControls, CONTROLS, setPadHints } from './ui.js';
+import { createMenu, renderControls, CONTROLS, setPadHints, setThumbProvider, OUTFIT_THUMBS } from './ui.js';
 import { P as PR, sanitizeLook, boosts, padStats, matchReward, recordMatch, setNamed, isOwned, save as saveProgress, charLevel } from './progress.js';
 import { createWorkshop, coinHTML } from './workshop.js';
 import { createLobby } from './lobby.js';
@@ -348,6 +348,42 @@ function tryRematch() {
 // estado del giro en el vestidor (debe existir antes de crear el menú: onPane lo usa al iniciar)
 const rot = { auto: true, yaw: 0, vel: 0, drag: false, lastX: 0 };
 let menuApi = null;
+// ---------- Miniaturas de outfits: el frijolito de verdad, fotografiado en un renderer aparte ----------
+const thumbQ = [];
+let thumbR = null, thumbScene = null, thumbBusy = false;
+function thumbSetup() {
+  thumbR = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  thumbR.setPixelRatio(1); thumbR.setSize(220, 250, false); thumbR.setClearColor(0x000000, 0);
+  thumbR.outputColorSpace = renderer.outputColorSpace; thumbR.toneMapping = renderer.toneMapping;
+  thumbScene = new THREE.Scene();
+  thumbScene.add(new THREE.HemisphereLight(0xffffff, 0xd9c9ad, 1.9));
+  const k = new THREE.DirectionalLight(0xffffff, 1.7); k.position.set(1.4, 2.2, 2.6); thumbScene.add(k);
+}
+function thumbOne() {
+  const job = thumbQ.shift(); if (!job) { thumbBusy = false; return; }
+  const { o, L, key } = job;
+  if (!thumbR) thumbSetup();
+  const look = { ...DEFAULT_LOOK, skin: L.skin, eyes: L.eyes, ears: 'none', hat: 'none', glasses: 'none', face: 'none', neck: 'none', back: 'none', gloves: null, ...o.look, name: '', number: 0 };
+  const v = createCharacter(look, { rotationY: 0.5 });
+  thumbScene.add(v.root); v.root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(v.root), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+  const h = Math.max(sz.y, sz.x * 1.05) * 1.08;
+  const cam = new THREE.PerspectiveCamera(24, 220 / 250, 0.05, 30);
+  const dist = h / 2 / Math.tan(THREE.MathUtils.degToRad(12));
+  cam.position.set(c.x + dist * 0.12, c.y + h * 0.1, c.z + dist); cam.lookAt(c.x, c.y, c.z);
+  thumbR.render(thumbScene, cam);
+  const url = thumbR.domElement.toDataURL('image/png');
+  thumbScene.remove(v.root); v.dispose();
+  OUTFIT_THUMBS[o.id] = { key, url };
+  document.querySelectorAll(`img[data-ot="${o.id}"]`).forEach(im => { im.src = url; im.classList.add('on'); });
+  requestAnimationFrame(thumbOne);   // una por fotograma: el menú no se traba
+}
+setThumbProvider((o, L, key) => {
+  if (thumbQ.some(j => j.o.id === o.id && j.key === key)) return;
+  thumbQ.push({ o, L: { skin: L.skin, eyes: L.eyes }, key });
+  if (!thumbBusy) { thumbBusy = true; requestAnimationFrame(thumbOne); }
+});
+
 const menu = createMenu({
   settings,
   onChange: applySettings,
