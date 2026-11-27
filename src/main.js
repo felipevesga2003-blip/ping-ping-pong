@@ -1117,7 +1117,9 @@ function updateCamera(dt) {
     // Primera persona: ojos del jugador, un poco detrás y a la derecha para ver la pala
     const p = G.chars[0];
     camTarget.set(p.x + 0.24, 1.32, p.z + 0.95);
-    lookTarget.set(p.x * 0.6 + G.ball.x * 0.15 + 0.12, 0.36, -1.4);
+    // la cabeza gira hacia la mesa: mira al centro (y un poco a la bola) aunque el jugador se vaya a un lado
+    const bx = Number.isFinite(G.ball.x) ? Math.max(-1.2, Math.min(1.2, G.ball.x)) : 0;
+    lookTarget.set(p.x * 0.12 + bx * 0.22 + 0.05, 0.36, -1.4);
   } else {
     // Tercera persona: zoom 0 (cerca) → 1 (lejos)
     const p = G.chars[0];
@@ -1128,7 +1130,7 @@ function updateCamera(dt) {
     const bz = Number.isFinite(G.ball.z) ? G.ball.z : 0, sway = Math.sin(time * 0.45) * 0.03;
     const dolly = camRally * 0.28 + camPoint * 0.3 + camPunch * 0.06;
     camTarget.set(p.x * (0.6 - t * 0.25) + G.ball.x * 0.14 + 0.35 + sway, h + (far - 1) * 1.4 - dolly * 0.35, C.HALF_L + 0.55 + back + (far - 1) * 2.6 - dolly);
-    lookTarget.set(p.x * 0.12 + G.ball.x * 0.11 + 0.05, 0.4 + (1 - t) * 0.2 + camPunch * 0.03, -0.4 - t * 0.45 + Math.max(-0.35, Math.min(0.2, bz * 0.12)));
+    lookTarget.set(p.x * 0.05 + G.ball.x * 0.11 + 0.02, 0.4 + (1 - t) * 0.2 + camPunch * 0.03, -0.4 - t * 0.45 + Math.max(-0.35, Math.min(0.2, bz * 0.12)));
   }
   const k = 1 - Math.exp(-(posing() ? 5 : screen === 'menu' ? 1.5 : fpActive ? 10 : 4) * dt);
   camPos.lerp(camTarget, k); camLook.lerp(lookTarget, k);
