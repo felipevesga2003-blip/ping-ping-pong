@@ -8,7 +8,7 @@ import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setC
 import { createTable, createBall } from './models.js';
 import { STAGES, stageById, resolveStage } from './stages.js';
 import { createGamepad, BTN } from './gamepad.js';
-import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDist } from './character.js';
+import { createCharacter, DEFAULT_LOOK, CPU_LOOKS, rivalColor, cpuLookFor, hueDist, randomCpuLook, fixCpuSkin } from './character.js';
 import { applyRemoteHit, applyRemotePoint, setRemoteState, localState, ballSnapshot, doEmote } from './game.js';
 import { createOnline } from './online.js';
 import { createArena } from './arena.js';
@@ -105,15 +105,16 @@ const playLook = () => sanitizeLook(settings.look);   // lo que ven los demás y
 let roster = [], teamShirts = ['#ffc93c', '#3cb5ff'];
 const lookOf = i => (i === 0 ? settings.look : roster[i].look);
 function cpuRoster(mode) {
-  const d = +settings.diff, me = { look: settings.look, ctrl: 'human' };
-  if (mode !== '2v2') return [me, { look: CPU_LOOKS[d], ctrl: 'ai' }];
-  return [me, { look: CPU_LOOKS[d], ctrl: 'ai' }, { look: CPU_LOOKS[(d + 1) % 4], ctrl: 'ai' }, { look: CPU_LOOKS[(d + 2) % 4], ctrl: 'ai' }];
+  // cada partido, rivales nuevos (y sin nombres repetidos entre ellos)
+  const me = { look: settings.look, ctrl: 'human' }, used = [];
+  const cpu = () => { const l = randomCpuLook(used); used.push(l.name); return { look: l, ctrl: 'ai', cpu: true }; };
+  return mode !== '2v2' ? [me, cpu()] : [me, cpu(), cpu(), cpu()];
 }
 function demoRoster() {
   // en una sala 1v1, la escena del menú ya muestra a tu rival
   const others = online.S.active ? online.S.players.filter(p => p.slot !== online.S.slot) : [];
   const opp = others.length && online.S.cfg && online.S.cfg.mode !== '2v2' ? { ...DEFAULT_LOOK, ...others[0].look } : null;
-  return [{ look: settings.look, ctrl: 'ai' }, { look: opp || CPU_LOOKS[2], ctrl: 'ai', remoteLook: !!opp }];
+  return [{ look: settings.look, ctrl: 'ai' }, opp ? { look: opp, ctrl: 'ai', remoteLook: true } : { look: randomCpuLook(), ctrl: 'ai', cpu: true }];
 }
 function teamColors() {
   const mine = settings.look.shirtColor, o = roster[1];
@@ -129,6 +130,7 @@ function buildViews() {
     let look;
     if (i === 0) look = screen === 'menu' ? settings.look : playLook();
     else if (p.ctrl === 'remote' || p.remoteLook) look = { ...DEFAULT_LOOK, ...p.look, shirtColor: teamShirts[team] };
+    else if (p.cpu) look = fixCpuSkin(p.look, teamShirts[team], settings.look.shirtColor);
     else {
       const ci = Math.max(0, CPU_LOOKS.indexOf(p.look));
       look = { ...cpuLookFor(ci, settings.look.shirtColor), shirtColor: teamShirts[team] };
@@ -271,7 +273,7 @@ const online = createOnline({
   getLook: () => playLook(),
   getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public', stage: resolveStage(settings.stage, arena.stage), realism: settings.realism }),
   onRoomInfo: r => lobby.setRoom(r),
-  botLook: s => ({ ...CPU_LOOKS[(+settings.diff + s) % 4] }),
+  botLook: () => randomCpuLook(),
   blip: () => { initAudio(); SFX.blip(); },
   openPrelobby,
   onRoster: players => {
@@ -303,7 +305,7 @@ function startOnline(m) {
   roster = [];
   for (let li = 0; li < n; li++) {
     const s = globalOf(li), p = m.players.find(x => x.slot === s) || { look: CPU_LOOKS[0], bot: true };
-    roster[li] = { look: { ...DEFAULT_LOOK, ...(s === g ? playLook() : p.look) }, ctrl: s === g ? 'human' : p.bot && online.S.isHost ? 'ai' : 'remote', slot: s };
+    roster[li] = { look: { ...DEFAULT_LOOK, ...(s === g ? playLook() : p.look) }, ctrl: s === g ? 'human' : p.bot && online.S.isHost ? 'ai' : 'remote', slot: s, cpu: !!p.bot && s !== g };
   }
   buildViews();
   newMatch(false, {

@@ -121,6 +121,38 @@ export function randomLook(name = 'Tú') {
   };
 }
 
+// Rival CPU distinto en cada partido: todo al azar, pero con un «color de tema» que comparten la pala,
+// los detalles de la ropa (gorra, ribetes, guantes) y la franja del mango; la madera va a juego con el pantalón
+const CPU_NAMES = ['Chícharo', 'Lenteja', 'Garbanzo', 'Haba', 'Alubia', 'Soja', 'Judión', 'Pinto', 'Azuki', 'Mungo', 'Edamame', 'Frijolón', 'Guisante', 'Altramuz', 'Cacahuete', 'Don Frijol', 'Lupino', 'Caraota'];
+export function randomCpuLook(avoid = []) {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const names = CPU_NAMES.filter(n => !avoid.includes(n));
+  const L = { ...randomLook(pick(names.length ? names : CPU_NAMES)), cpu: true };
+  if (Math.random() < 0.22) {   // a veces, un outfit completo (sumo, ninja, mariachi…)
+    const o = pick(OUTFITS);
+    Object.assign(L, o.look);
+  }
+  const theme = pick(PADDLE_COLORS);
+  L.paddleColor = theme;
+  L.accent = theme;
+  if (L.hat !== 'none' && Math.random() < 0.7) L.hatColor = theme;
+  if (!L.gloves && Math.random() < 0.15) L.gloves = theme;
+  const pl = {}; new THREE.Color(L.pantsColor || '#2c3a66').getHSL(pl);
+  L.paddleWood = pick(pl.l < 0.3 ? PADDLE_WOODS.slice(3) : PADDLE_WOODS.slice(0, 4)).c;
+  L.paddleDesign = Math.floor(Math.random() * 3);
+  L.paddleType = pick(['balanced', 'fast', 'spin', 'control', 'power']);
+  L.number = 1 + Math.floor(Math.random() * 99);
+  return L;
+}
+// La piel del rival nunca se confunde con las camisetas de los equipos
+export function fixCpuSkin(look, shirt, playerShirt) {
+  let skin = look.skin;
+  if (hueDist(skin, shirt) < 0.09 || hueDist(skin, playerShirt) < 0.05) {
+    skin = SKINS.slice(0, 8).reduce((best, s) => Math.min(hueDist(s, shirt), hueDist(s, playerShirt)) > Math.min(hueDist(best, shirt), hueDist(best, playerShirt)) ? s : best, SKINS[0]);
+  }
+  return { ...look, shirtColor: shirt, skin };
+}
+
 const INK = 0x24120f;
 const FOOT = 0.1;   // altura del cuerpo sobre el suelo (las zapatillas van debajo)
 
@@ -991,7 +1023,6 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
     // Clásica: franja de agarre y etiqueta rectangular abajo a la izquierda
     const grip2 = ccw([[-0.0085, 0.028], [-0.009, -0.02], [-0.0115, yE + 0.012], [0.0115, yE + 0.012], [0.009, -0.02], [0.0085, 0.028]]);
     paddle.add(piece(grip2, 0.0275, accentCol, 0.0015, false));
-    onFaces(rect(-pa * 0.62, yR + 0.008, -pa * 0.12, yR + 0.024), 0xf2eadb);
   } else if (design === 1) {
     // Pro: collar y remate del color de la goma, línea fina sobre el corte de la goma
     paddle.add(piece(rect(-0.0215, yTop - 0.012, 0.0215, yTop + 0.001), 0.0285, rubber, 0.0012, false));
