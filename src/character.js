@@ -927,19 +927,63 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
   paddle.rotation.order = 'XZY';   // el giro Y (sobre el mango) se aplica primero
   const ptype = look.paddleType || 'balanced';
   const rubber = new THREE.Color(look.paddleColor || '#f03e3e').getHex();
-  const handle = box(0.032, 0.11, 0.026, ptype === 'power' ? 0x3a2416 : 0xd9a066, 0.008); handle.position.y = 0.05; paddle.add(handle);
-  const bladeR = ptype === 'control' ? 0.118 : ptype === 'fast' ? 0.09 : 0.1;
-  const blade = cyl(bladeR, bladeR, ptype === 'power' ? 0.03 : 0.018, rubber, 0.01); blade.rotation.x = Math.PI / 2; blade.position.y = 0.16;
-  if (ptype === 'fast') blade.scale.set(0.85, 1, 1.15);
-  paddle.add(blade);
-  const bladeBack = cyl(bladeR * 0.96, bladeR * 0.96, 0.004, 0x222233, 0, false); bladeBack.rotation.x = Math.PI / 2; bladeBack.position.set(0, 0.16, -0.011 - (ptype === 'power' ? 0.008 : 0));
-  if (ptype === 'fast') bladeBack.scale.set(0.85, 1, 1.15);
-  paddle.add(bladeBack);
+  // Pala de verdad: hoja de madera redondeada (algo más alta que ancha) que se estrecha en los hombros
+  // hacia el cuello, dos gomas (delante del color elegido, detrás negra) con borde de madera y corte recto
+  // sobre el cuello, y mango abocinado más grueso que la hoja con franja de agarre. El mango termina
+  // por debajo de la goma, así que nunca la atraviesa.
+  const PCY = 0.16;                                                       // centro de la hoja (desde la mano)
+  const dims = { control: [0.108, 0.112], fast: [0.088, 0.106], power: [0.1, 0.104] }[ptype] || [0.098, 0.102];
+  const [pa, pb] = dims, woodT = ptype === 'power' ? 0.011 : 0.007;
+  const bladeR = pa;
+  const ccw = pts => { let A = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; A += p[0] * q[1] - q[0] * p[1]; } return A < 0 ? pts.reverse() : pts; };
+  const offsetPts = (pts, d) => pts.map((p, i) => {
+    const a = pts[(i - 1 + pts.length) % pts.length], c = pts[(i + 1) % pts.length];
+    let nx = (p[1] - a[1]) + (c[1] - p[1]), ny = -(p[0] - a[0]) - (c[0] - p[0]);
+    const L = Math.hypot(nx, ny) || 1; return [p[0] + nx / L * d, p[1] + ny / L * d];
+  });
+  const extr = (pts, depth, bevel = 0) => {
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1]))),
+      { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 4 });
+    g.translate(0, 0, -depth / 2); g.computeVertexNormals(); return own(g);
+  };
+  const piece = (pts, depth, color, bevel = 0, outline = true) => {
+    const grp = new THREE.Group();
+    grp.add(mesh(extr(pts, depth, bevel), toon(color)));
+    if (outline) grp.add(new THREE.Mesh(extr(offsetPts(pts, 0.006), depth + bevel * 2 + 0.012), outlineMat));
+    return grp;
+  };
+  // contorno de la hoja: superelipse + hombros curvos hasta el cuello
+  const yT = PCY - pb - 0.008, tw = 0.017, se = 2.25, gap = 0.62;
+  const blade2 = [];
+  for (let i = 0; i <= 56; i++) {
+    const t = -Math.PI / 2 + gap + (2 * Math.PI - 2 * gap) * i / 56, c = Math.cos(t), s = Math.sin(t);
+    blade2.push([pa * Math.sign(c) * Math.abs(c) ** (2 / se), PCY + pb * Math.sign(s) * Math.abs(s) ** (2 / se)]);
+  }
+  const [lx, ly] = blade2[blade2.length - 1];
+  const q = (p0, p1, p2, t) => [(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
+  for (let i = 1; i <= 8; i++) blade2.push(q([lx, ly], [-tw * 1.25, yT + 0.012], [-tw, yT], i / 8));
+  for (let i = 0; i < 8; i++) blade2.push(q([tw, yT], [tw * 1.25, yT + 0.012], [-lx, ly], i / 8));
+  ccw(blade2);
+  // goma: la hoja recortada sobre el cuello (línea recta) y metida un poco hacia dentro (se ve el canto de madera)
+  const yR = PCY - pb * 0.8;
+  const clipY = (pts, y0) => { const out = []; for (let i = 0; i < pts.length; i++) { const p = pts[i], n = pts[(i + 1) % pts.length], pi = p[1] >= y0, ni = n[1] >= y0; if (pi) out.push(p); if (pi !== ni) { const f = (y0 - p[1]) / (n[1] - p[1]); out.push([p[0] + (n[0] - p[0]) * f, y0]); } } return out; };
+  const rubber2 = offsetPts(clipY(blade2, yR), -0.0035);
+  const wood = ptype === 'power' ? 0x8a5a2b : 0xe3b47a;
+  paddle.add(piece(blade2, woodT, wood, 0.0012));
+  const rubT = 0.0025, zR = woodT / 2 + 0.0012 + rubT / 2;
+  const rubFront = piece(rubber2, rubT, rubber, 0, false); rubFront.position.z = zR; paddle.add(rubFront);
+  const rubBack = piece(rubber2, rubT, 0x1d1d22, 0, false); rubBack.position.z = -zR; paddle.add(rubBack);
+  // mango abocinado (FL): más ancho en el extremo, con franja de agarre del color de la goma
+  const yTop = yT + 0.014, yE = -0.055;
+  const handle2 = ccw([[-0.021, yTop], [-0.0165, yT - 0.012], [-0.0155, yT - 0.035], [-0.0165, -0.02], [-0.021, yE + 0.016], [-0.017, yE], [0.017, yE], [0.021, yE + 0.016], [0.0165, -0.02], [0.0155, yT - 0.035], [0.0165, yT - 0.012], [0.021, yTop]]);
+  paddle.add(piece(handle2, 0.02, ptype === 'power' ? 0x3a2416 : wood, 0.003));
+  const grip2 = ccw([[-0.0085, 0.028], [-0.009, -0.02], [-0.0115, yE + 0.012], [0.0115, yE + 0.012], [0.009, -0.02], [0.0085, 0.028]]);
+  const grip = piece(grip2, 0.0275, ptype === 'power' ? 0x1d1d22 : darken(rubber, 0.15), 0.0015, false); paddle.add(grip);
   if (ptype === 'spin') {   // espiral decorativa
     const sp = mesh(own(new THREE.TorusGeometry(bladeR * 0.55, 0.008, 6, 24, Math.PI * 1.5)), toon(0xffffff), false);
-    sp.position.set(0, 0.16, 0.011); paddle.add(sp);
+    sp.position.set(0, PCY + 0.005, zR + rubT / 2 + 0.0008); paddle.add(sp);
   }
-  if (ptype === 'fast') { const bolt = box(0.02, 0.1, 0.004, 0xffd166, 0, false); bolt.rotation.z = 0.4; bolt.position.set(0, 0.16, 0.011); paddle.add(bolt); }
+  if (ptype === 'fast') { const bolt = box(0.02, 0.1, 0.002, 0xffd166, 0, false); bolt.rotation.z = 0.4; bolt.position.set(0, PCY + 0.005, zR + rubT / 2 + 0.001); paddle.add(bolt); }
   // brazo libre (el otro)
   const offPivot = new THREE.Group(); offPivot.position.set(shoulderX, shoulderY, 0); body.add(offPivot);
   const offPos = new THREE.Vector3(0.3, -0.18, 0.1);
