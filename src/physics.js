@@ -195,5 +195,13 @@ export function simEvents(st, v, w, maxT = 2.4) {
     else if (ev === EV_NET) out.net = true;
     else if (ev === EV_FLOOR) { out.floor = true; break; }
   }
+  // ¿tras el 2º bote la bola sale de la mesa (el rival puede golpearla) o se queda corta?
+  if (out.length >= 2) {
+    for (let t = 0; t < 1.2; t += STEP) {
+      const ev = physStep(s, STEP);
+      if (ev === EV_TABLE) { out.short = true; break; }
+      if (Math.abs(s.z) > HALF_L - 0.05 || ev === EV_FLOOR) break;
+    }
+  }
   return out;
 }

@@ -451,6 +451,10 @@ function stepAside(c, sp, dt) {
   moveTo(c, side * 0.95 * c.sign, c.sign * (HALF_L + 1.05), sp, dt);
 }
 
+// La pala nunca se mete en la mesa: si su plano está encima del tablero, se queda por encima
+const PADDLE_CLEAR = 0.13;
+const overTable = h => Math.abs(h.z) < HALF_L + 0.06 && Math.abs(h.x) < C.HALF_W + 0.1 && h.y < TABLE_H + PADDLE_CLEAR;
+
 // Mano libre: la pala persigue al ratón con un alcance máximo desde el hombro
 function updateHand(c, dt) {
   const h = G.hand;
@@ -465,6 +469,7 @@ function updateHand(c, dt) {
   const ox = h.x, oy = h.y;
   const k = 1 - Math.exp(-30 * dt);
   h.x += (tx - h.x) * k; h.y += (ty - h.y) * k;
+  if (overTable(h)) h.y = TABLE_H + PADDLE_CLEAR;
   const ivx = (h.x - ox) / dt, ivy = (h.y - oy) / dt;
   const s = 1 - Math.exp(-25 * dt);
   h.vx += (ivx - h.vx) * s; h.vy += (ivy - h.vy) * s;
@@ -666,17 +671,18 @@ function updateHandReal(c, dt) {
   const L = Math.hypot(dx, dy), reach = C.REAL.REACH * c.boost.reach;
   if (L > reach) { dx *= reach / L; dy *= reach / L; }
   const tx = sx + dx, ty = Math.max(TABLE_H - 0.25, sy + dy);
-  const K = 230, Z = 0.72;
+  const K = 560, Z = 0.82;   // brazo ágil pero con algo de inercia
   const ax = K * (tx - h.x) - 2 * Z * Math.sqrt(K) * h.vx, ay = K * (ty - h.y) - 2 * Z * Math.sqrt(K) * h.vy;
   h.vx += ax * dt; h.vy += ay * dt;
-  const sp = Math.hypot(h.vx, h.vy); if (sp > 9) { h.vx *= 9 / sp; h.vy *= 9 / sp; }
+  const sp = Math.hypot(h.vx, h.vy); if (sp > 12) { h.vx *= 12 / sp; h.vy *= 12 / sp; }
   h.x += h.vx * dt; h.y += h.vy * dt;
+  if (overTable(h)) { h.y = TABLE_H + PADDLE_CLEAR; if (h.vy < 0) h.vy = 0; }
   h.stretch = Math.min(1, L / reach);
-  h.roll += (h.rollTarget - h.roll) * Math.min(1, dt * 5);          // la muñeca gira poco a poco
+  h.roll += (h.rollTarget - h.roll) * Math.min(1, dt * 9);          // la muñeca gira rápido pero no de golpe
   h.pitchT = clamp(h.vy * 0.13, -0.75, 0.75);
-  [h.pitch, h.pitchV] = spring(h.pitch || 0, h.pitchV || 0, h.pitchT, 150, 0.5, dt, -ay * 0.45);
-  [h.rz, h.rzV] = spring(h.rz || 0, h.rzV || 0, h.roll * 0.45, 110, 0.4, dt, ax * 0.4);
-  [h.yaw, h.yawV] = spring(h.yaw || 0, h.yawV || 0, clamp(h.roll * 0.38 + h.vx * 0.045, -0.6, 0.6), 120, 0.6, dt);
+  [h.pitch, h.pitchV] = spring(h.pitch || 0, h.pitchV || 0, h.pitchT, 240, 0.5, dt, -ay * 0.2);
+  [h.rz, h.rzV] = spring(h.rz || 0, h.rzV || 0, h.roll * 0.45, 180, 0.42, dt, ax * 0.18);
+  [h.yaw, h.yawV] = spring(h.yaw || 0, h.yawV || 0, clamp(h.roll * 0.38 + h.vx * 0.04, -0.6, 0.6), 200, 0.6, dt);
   h.pitch = clamp(h.pitch, -1.2, 1.2); h.rz = clamp(h.rz, -1.3, 1.3);
 }
 // Saque realista: la bola se lanza al aire desde la palma y hay que golpearla al caer
@@ -715,12 +721,13 @@ function freeHitReal(c, d, serve) {
   c.swing = C.SWING_DUR; c.swingType = type;
   if (serve) {
     G.phase = 'rally';
-    const power = clamp(0.15 + swing / 6, 0.15, 1);
+    const power = clamp(0.45 + swing / 6, 0.45, 1);
     launch(c, start, { x: b.x * 0.3 + Math.sin(yaw) * 1.2, z: -c.sign }, 0, top * 0.6, side * 0.6, 1, true, false, type, power);
     return;
   }
   const vin = Math.abs(b.vz);
-  let hs = (0.38 * vin + 1.1 + 0.85 * swing) * pad.speed * c.boost.str * (0.7 + 0.3 * q);   // rebote en la goma + empuje
+  const drive = 7.2 * (1 - Math.exp(-swing / 5));   // el empuje crece rápido al principio y se satura: solo un swing exagerado la manda larga
+  let hs = (0.38 * vin + 1.1 + drive) * pad.speed * c.boost.str * (0.7 + 0.3 * q);   // rebote en la goma + empuje
   const smash = b.y > TABLE_H + C.SMASH_H && (h.vy < -1.2 || swing > 3.4);
   if (smash) { hs = Math.max(hs, 7.2) * pad.smash; top = 25; }
   const power = clamp((hs - 2) / 7, 0, 1);
@@ -732,7 +739,7 @@ function freeHitReal(c, d, serve) {
   const w = { x: top * dz / dd, y: side, z: -top * dx / dd };
   const v = P.solveShot(start, tg, dd / Math.min(hs, 8.5), w);
   if (hs > 8.5) { const k = Math.pow(hs / 8.5, 0.8); v.vx *= k; v.vz *= k; }           // demasiado fuerte: se va largo
-  v.vy -= ((h.pitch || 0) - (h.pitchT || 0)) * 1.1;                                       // cara más cerrada/abierta de la cuenta
+  v.vy -= clamp((h.pitch || 0) - (h.pitchT || 0), -0.25, 0.25) * 0.6;                    // la muñeca, si latiguea de más, varía un poco la altura
   v.vy += incomingTop(b) * 0.004 * (1 - Math.min(1, swing / 4));                          // el liftado rival hace saltar un bloqueo
   const err = (1 - q) * 0.6 / pad.ctrl;
   v.vy += randn() * err * 0.5; v.vx += randn() * err * 0.6;
@@ -740,19 +747,20 @@ function freeHitReal(c, d, serve) {
 }
 // Saque reglamentario: bota primero en tu campo y luego en el rival. Busca la combinación que mejor encaja
 function realServe(c, start, power, top, side, aimX) {
-  const own = c.sign, want = { x: clamp(aimX, -C.HALF_W + 0.15, C.HALF_W - 0.15), z: -own * (0.55 + 0.6 * power) };
+  power = Math.max(power, 0.45);   // fuerza mínima: un saque demasiado suave no hay quien lo devuelva
+  const own = c.sign, want = { x: clamp(aimX, -C.HALF_W + 0.15, C.HALF_W - 0.15), z: -own * (0.72 + 0.45 * power) };
   const dx = want.x - start.x, dz = want.z - start.z, dd = Math.hypot(dx, dz) || 1;
   const w = { x: top * dz / dd, y: side, z: -top * dx / dd };
   let best = null, bestS = 1e9;
   for (const zo of [0.12, 0.25, 0.4, 0.55, 0.7, 0.85]) {
     const f = (start.z - own * zo) / (start.z - want.z || 1);
-    const tgOwn = { x: start.x + dx * f, z: own * zo };
+    const tgOwn = { x: clamp(start.x + dx * f, -C.HALF_W + 0.12, C.HALF_W - 0.12), z: own * zo };
     for (const T of [0.12, 0.17, 0.22, 0.28, 0.35, 0.44, 0.55, 0.7]) {
       const v = P.solveTo(start, tgOwn, T, w);
       const ev = P.simEvents(start, v, w);
       let s;
       if (ev.length >= 2 && P.sideOf(ev[0].z) === c.team && P.sideOf(ev[1].z) !== c.team && Math.abs(ev[1].x) < C.HALF_W && Math.abs(ev[1].z) < HALF_L)
-        s = Math.hypot(ev[1].x - want.x, ev[1].z - want.z) + (ev.net ? 2 : 0);
+        s = Math.hypot(ev[1].x - want.x, ev[1].z - want.z) + (ev.net ? 2 : 0) + (ev.short ? 3 : 0) + (Math.abs(ev[1].z) < 0.65 ? 1.5 : 0);
       else s = 50 + Math.abs(T - 0.4) + Math.abs(zo - 0.3);   // si ninguno es legal, al menos un saque normal
       if (s < bestS) { bestS = s; best = v; }
     }

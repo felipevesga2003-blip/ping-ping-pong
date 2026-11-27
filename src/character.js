@@ -7,7 +7,7 @@
 // =============================================================
 import * as THREE from 'three';
 import { toon, sphere, cyl, capsule, box, outlineMat, darken, lighten } from './models.js';
-import { SWING_DUR } from './config.js';
+import { SWING_DUR, TABLE_H, HALF_L, HALF_W } from './config.js';
 
 // ---------- Catálogo de personalización ----------
 export const SKINS = ['#4da8ff', '#5fd3a4', '#ffd166', '#b39cff', '#ff9f6b', '#8bd450', '#f2eee6', '#6be0e8', '#f4c6a5', '#8a5a3c', '#2b2b33', '#ff7eb6'];
@@ -1159,6 +1159,16 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
         st.armZ = ease(st.armZ, sad ? 0.5 : 0, dt * 6);
       }
       armPivot.rotation.y = st.armY; armPivot.rotation.z = st.armZ;
+      // si la animación mete la pala en la mesa (jugador muy pegado), el brazo sube lo justo
+      const padLow = () => { root.updateMatrixWorld(true); paddle.getWorldPosition(tmp); return Math.abs(tmp.z) < HALF_L + 0.08 && Math.abs(tmp.x) < HALF_W + 0.1 ? TABLE_H + 0.12 - tmp.y : -1; };
+      let low = padLow();
+      if (low > 0) {
+        const z0 = armPivot.rotation.z;
+        armPivot.rotation.z = z0 - 0.15; const dirUp = padLow() < low ? -1 : 1;
+        armPivot.rotation.z = z0;
+        for (let i = 0; i < 10 && low > 0; i++) { armPivot.rotation.z += dirUp * 0.12; low = padLow(); }
+        st.armZ = armPivot.rotation.z;
+      }
     }
     if (c.fx) powerFx(c.fx, dt, t);
     // brazo libre: balanceo, puño arriba al celebrar, caído si está triste, gestos de emote

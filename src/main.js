@@ -717,7 +717,7 @@ onEvent((type, d) => {
     if (d.smash) {
       SFX.smash();
       fx.star(pos, 0xffd166, 0.7); fx.ring(pos, 0xff6b3d, 0.9);
-      shake = 0.13; hitstop = 0.07; slow = 0.35;
+      shake = 0.13; hitstop = 0.07; slow = 0.35; if (!G.demo) camPunch = 1.6;
       pop3D('¡SMASH!', pos, 'smash');
       arena.hype(0.4);
     } else {
@@ -725,6 +725,7 @@ onEvent((type, d) => {
       fx.star(pos, 0xffffff, 0.22 + d.power * 0.15);
       fx.ring(pos, COLS[d.c], 0.35);
       shake = Math.max(shake, 0.015 + 0.02 * d.power);
+      if (!G.demo) camPunch = Math.max(camPunch, 0.35 + 0.5 * d.power);
     }
     if (d.grade === 'perfect') {
       SFX.perfect();
@@ -744,6 +745,7 @@ onEvent((type, d) => {
     return;
   }
   if (type === 'point') {
+    if (!G.demo) camPoint = 1;   // leve acercamiento al cerrar el punto
     referee.onPoint(d.winner, G.rally);
     if (G.online && d.auth) netSend({ t: 'pt', w: d.winner, reason: d.reason, score: d.score, games: d.games });
     refreshHUD(); bump('s' + d.winner);
@@ -1084,6 +1086,8 @@ addEventListener('wheel', e => {
 
 const camPos = new THREE.Vector3(5, 3, 5), camLook = new THREE.Vector3(0, 0.8, 0);
 const camTarget = new THREE.Vector3(), lookTarget = new THREE.Vector3();
+// Dinamismo de cámara: pequeño «punch» en cada golpe, acercamiento lento durante el peloteo y al ganar el punto
+let camPunch = 0, camPoint = 0, camRally = 0;
 function updateCamera(dt) {
   setFP(screen !== 'menu' && !G.demo && camZoom < FP_ZOOM);
   if (camTagTimer > 0 && (camTagTimer -= dt) <= 0) $('camTag').classList.remove('on');
@@ -1111,13 +1115,18 @@ function updateCamera(dt) {
     const p = G.chars[0];
     const t = Math.max(0, Math.min(1, (camZoom - FP_ZOOM) / (1 - FP_ZOOM)));
     const back = 1.0 + t * 2.4, h = 1.75 + t * 1.95;
-    camTarget.set(p.x * (0.6 - t * 0.25) + G.ball.x * 0.1 + 0.35, h + (far - 1) * 1.4, C.HALF_L + 0.55 + back + (far - 1) * 2.6);
-    lookTarget.set(p.x * 0.12 + G.ball.x * 0.08 + 0.05, 0.4 + (1 - t) * 0.2, -0.4 - t * 0.45);
+    // el peloteo largo acerca la cámara poco a poco; la bola tira un poco del encuadre
+    camRally += ((G.phase === 'rally' ? Math.min(1, G.rally / 10) : 0) - camRally) * Math.min(1, dt * 1.2);
+    const bz = Number.isFinite(G.ball.z) ? G.ball.z : 0, sway = Math.sin(time * 0.45) * 0.03;
+    const dolly = camRally * 0.28 + camPoint * 0.3 + camPunch * 0.06;
+    camTarget.set(p.x * (0.6 - t * 0.25) + G.ball.x * 0.14 + 0.35 + sway, h + (far - 1) * 1.4 - dolly * 0.35, C.HALF_L + 0.55 + back + (far - 1) * 2.6 - dolly);
+    lookTarget.set(p.x * 0.12 + G.ball.x * 0.11 + 0.05, 0.4 + (1 - t) * 0.2 + camPunch * 0.03, -0.4 - t * 0.45 + Math.max(-0.35, Math.min(0.2, bz * 0.12)));
   }
   const k = 1 - Math.exp(-(posing() ? 5 : screen === 'menu' ? 1.5 : fpActive ? 10 : 4) * dt);
   camPos.lerp(camTarget, k); camLook.lerp(lookTarget, k);
-  const fov = fpActive ? 66 : 46;
-  if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
+  camPunch *= Math.exp(-7 * dt); camPoint *= Math.exp(-1.4 * dt);
+  const fov = (fpActive ? 66 : 46) - (fpActive || screen !== 'game' ? 0 : camPunch * 1.8 + camPoint * 2.2 + camRally * 1.2);
+  if (Math.abs(camera.fov - fov) > 0.02) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
   camera.position.copy(camPos);
   if (shake > 0.001) {
     camera.position.x += (Math.random() - 0.5) * shake;
