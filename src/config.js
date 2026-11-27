@@ -29,6 +29,8 @@ export const FREE_REACH = 1.15;   // alcance máximo del brazo elástico (m)
 export const FREE_HIT_R = 0.27;   // radio útil de la pala (generoso, estilo arcade)
 export const FREE_BODY_SPEED = 2.6;
 export const ZONE_X = 1.7;
+// Modo realista: más lento, pala más pequeña, brazo y muñeca con inercia
+export const REAL = { TIME_SCALE: 0.66, HIT_R: 0.2, REACH: 1.05 };
 export const ZONE_Z = [HALF_L + 0.15, HALF_L + 1.5];
 
 export const DIFFS = [

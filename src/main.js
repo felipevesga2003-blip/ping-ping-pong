@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import * as C from './config.js';
 import * as P from './physics.js';
-import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR, activatePower, POWERS } from './game.js';
+import { G, onEvent, newMatch, update, startCharge, releaseCharge, paddleZ, setControl, freeR, activatePower, POWERS, timeScale } from './game.js';
 import { createTable, createBall } from './models.js';
 import { STAGES, stageById, resolveStage } from './stages.js';
 import { createGamepad, BTN } from './gamepad.js';
@@ -82,7 +82,9 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', realism: 'arcade', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+// El modo realista obliga a jugar con mano libre (sin tocar la preferencia guardada del jugador)
+let matchReal = false;
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
 if (!CONTROLS[settings.control]) settings.control = 'classic';
 settings.look = { ...DEFAULT_LOOK, ...(settings.look || {}) };
@@ -146,7 +148,7 @@ const paddlesOf = () => roster.map((p, i) => (i === 0 ? settings.look.paddleType
 const padsOf = () => roster.map((p, i) => (i === 0 ? padStats() : C.PADDLES[p.look.paddleType] || C.PADDLES.balanced));
 const boostsOf = () => roster.map((p, i) => (i === 0 ? boosts() : null));
 function applySettings() {
-  G.diff = +settings.diff; G.target = +settings.target; G.assist = !!+settings.assist; G.control = settings.control;
+  G.diff = +settings.diff; G.target = +settings.target; G.assist = !!+settings.assist; G.control = matchReal ? 'free' : settings.control;
   try { localStorage.setItem('ppp-settings', JSON.stringify(settings)); } catch (e) { /* sin storage */ }
 }
 applySettings();
@@ -156,23 +158,32 @@ const teamName = t => roster.map((p, i) => ({ p, i })).filter(x => x.i % 2 === t
 
 // ---------- Pantallas ----------
 function show(id, on) { $(id).classList.toggle('hidden', !on); }
+const ctrlKey = () => (matchReal ? 'real' : settings.control);
+function showRealTag() {
+  if (!matchReal) return;
+  const tag = $('camTag'); tag.textContent = 'Modo realista · mano libre'; tag.classList.add('on'); camTagTimer = 2.4;
+}
 function enterGame() {
   initAudio(); SFX.select();
   screen = 'game'; setSfxEnabled(true);
   show('menu', false); show('over', false); show('pause', false); show('prelobby', false); show('hud', true);
-  renderControls(settings.control);
+  G.control = matchReal ? 'free' : settings.control; setControl(G.control);
+  renderControls(ctrlKey());
   $('controls').classList.toggle('off', !+settings.showControls);
 }
 function startGame() {
+  matchReal = settings.realism === 'real';
   enterGame(); show('netTag', false);
   roster = cpuRoster(settings.mode);
   arena.setStage(resolveStage(settings.stage, arena.stage)); setAmbient(arena.stage);
   buildViews();
-  newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf() });
+  newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal });
+  showRealTag();
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
   screen = 'menu'; setSfxEnabled(false); setAmbient(null);
+  matchReal = false; G.control = settings.control;
   show('menu', true); show('over', false); show('pause', false); show('hud', false); show('netTag', false);
   if (wasOnline && !keepRoom) { online.send({ t: 'bye' }); online.leave(); }
   else if (wasOnline) online.endMatch();
@@ -184,7 +195,7 @@ function setPause(on) {
   if (screen === 'menu' || (G.phase === 'over' && on)) return;
   screen = on ? 'pause' : 'game';
   show('pause', on);
-  show('restartBtn', !G.online); show('pauseOnline', G.online); refreshPauseStyle();
+  show('restartBtn', !G.online); show('pauseOnline', G.online); show('pauseStyle', !matchReal); refreshPauseStyle();
   if (on) {
     releaseCharge(G.chars[0]);
     $('pS0').textContent = G.score[0]; $('pS1').textContent = G.score[1];
@@ -205,6 +216,9 @@ function openPrelobby(kind) {
 }
 function refreshPrelobby() {
   document.querySelectorAll('#prelobby .seg2[data-k]').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(settings[s.dataset.k]) === b.dataset.v)));
+  $('plRealDesc').textContent = settings.realism === 'real'
+    ? 'Más lento, física real · solo mano libre, con muñeca'
+    : 'Rápido y exagerado · cualquier estilo de control';
   $('plModeDesc').textContent = settings.mode === '2v2'
     ? (plFor === 'online' ? 'Hasta 4 jugadores: dos equipos de dos' : 'Tú y un compañero CPU contra dos CPU')
     : (plFor === 'online' ? 'Tú contra otro jugador' : 'Tú contra la CPU');
@@ -254,7 +268,7 @@ function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) retur
 const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
   getLook: () => playLook(),
-  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public', stage: resolveStage(settings.stage, arena.stage) }),
+  getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public', stage: resolveStage(settings.stage, arena.stage), realism: settings.realism }),
   onRoomInfo: r => lobby.setRoom(r),
   botLook: s => ({ ...CPU_LOOKS[(+settings.diff + s) % 4] }),
   blip: () => { initAudio(); SFX.blip(); },
@@ -282,6 +296,8 @@ function startOnline(m) {
   rematch = { me: false, them: new Set() };
   $('againBtn').classList.remove('waiting');
   const cfg = m.cfg, n = cfg.mode === '2v2' ? 4 : 2, g = online.S.slot;
+  matchReal = cfg.realism === 'real';
+  G.control = matchReal ? 'free' : settings.control; setControl(G.control); renderControls(ctrlKey());
   arena.setStage(stageById(cfg.stage).id); setAmbient(arena.stage);
   roster = [];
   for (let li = 0; li < n; li++) {
@@ -291,8 +307,9 @@ function startOnline(m) {
   buildViews();
   newMatch(false, {
     online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
-    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(),
+    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal,
   });
+  showRealTag();
   if (DEBUG === 'bot') G.chars[0].ai = true;
   refreshHUD();
 }
@@ -302,7 +319,7 @@ function handleNet(m) {
   const li = localOf(m.from), rot = (m.ft ?? teamOfSlot(m.from)) !== myFrame();
   switch (m.t) {
     case 'st': setRemoteState(li, m, rot); break;
-    case 'hit': applyRemoteHit(m, li, rot, (online.S.rtt / 2000) * C.TIME_SCALE); break;
+    case 'hit': applyRemoteHit(m, li, rot, (online.S.rtt / 2000) * timeScale()); break;
     case 'pt': applyRemotePoint(m, rot); break;
     case 'emote': doEmote(li, m.id, true); break;
     case 'power': if (G.chars[li]) activatePower(G.chars[li].team, m.id); break;
@@ -433,6 +450,10 @@ $('pubList').addEventListener('click', e => { const b = e.target.closest('.pub-j
 // ---------- Cambio de estilo durante el partido ----------
 function refreshPauseStyle() { $('pauseStyleTxt').textContent = 'Cambiar a ' + CONTROLS[settings.control === 'free' ? 'classic' : 'free'].name; }
 function toggleStyle() {
+  if (matchReal) {
+    const tag = $('camTag'); tag.textContent = 'Realista: solo mano libre'; tag.classList.add('on'); camTagTimer = 1.6;
+    return;
+  }
   settings.control = settings.control === 'free' ? 'classic' : 'free';
   applySettings(); setControl(settings.control);
   renderControls(settings.control); $('controls').classList.toggle('off', !+settings.showControls);
@@ -881,7 +902,7 @@ let padActive = false, padWake = false, padCharge = false, padArmed = '', gpEl =
 function setPadActive(on) {
   if (padActive === on) return;
   padActive = on; setPadHints(on);
-  renderControls(settings.control);
+  renderControls(ctrlKey());
   if (!on) { setGp(null); $('gpTag').classList.remove('on'); }
 }
 function fakeKey(code) {
@@ -1185,7 +1206,7 @@ function frame(now) {
   let gdt = 0;
   const pose = posing();
   if ((screen !== 'pause' || G.online) && !pose) {
-    let ts = C.TIME_SCALE;
+    let ts = timeScale();
     if (hitstop > 0) { hitstop -= dt; ts = 0; }
     else if (slow > 0) { slow -= dt; ts *= 0.35; }
     gdt = dt * ts;

@@ -42,6 +42,20 @@ export const CONTROLS = {
   },
 };
 
+CONTROLS.real = {
+  name: 'Realista',
+  rows: [
+    ['Ratón', 'Es tu brazo: tiene peso, se pasa y vuelve'],
+    ['Swing ↑', '<b class="c-top">Liftado</b> · la muñeca cierra la cara'],
+    ['Swing ↓', '<b class="c-back">Cortado</b> · la cara se abre'],
+    ['Velocidad', 'Más rápido = más fondo… o se va larga'],
+    ['Latigazo', 'Acelera y frena en seco: la muñeca suma efecto'],
+    ['Clics', 'Izq. / der.: gira la muñeca y dirige'],
+    ['Saque', 'La bola sube sola: golpéala al caer'],
+    ['Rueda', 'Cámara · al tope, 1ª persona'],
+  ],
+};
+
 // Controles con mando (mapeo estándar Xbox · entre paréntesis PlayStation)
 export const PAD_CONTROLS = {
   classic: [
@@ -53,6 +67,14 @@ export const PAD_CONTROLS = {
     ['Stick izq.', 'Moverte (manual) · si no, también apunta'],
     ['Y', 'Cambiar cámara (△)'],
     ['Cruceta', 'Emotes · L3 / R3 más emotes'],
+  ],
+  real: [
+    ['Stick der.', 'Tu brazo · movimientos rápidos = swing'],
+    ['Swing ↑ / ↓', '<b class="c-top">Liftado</b> / <b class="c-back">cortado</b>'],
+    ['Latigazo', 'Acelera y frena: la muñeca suma efecto'],
+    ['LB / RB', 'Gira la muñeca ← / →'],
+    ['Saque', 'La bola sube sola: golpéala al caer'],
+    ['Y', 'Cambiar cámara (△)'],
   ],
   free: [
     ['Stick der.', 'Mueve la pala · muévelo rápido = swing'],
@@ -86,7 +108,7 @@ export function renderControls(mode) {
     `<div class="ctl-head"><b>${padHints ? 'Mando' : 'Controles'}</b><span class="ctl-mode">${c.name}</span></div>` +
     rows.map(([k, t]) => `<div class="ctl"><kbd>${k}</kbd><span>${t}</span></div>`).join('') +
     (padHints ? `<div class="ctl-foot"><kbd>B</kbd> racha <kbd>View</kbd> estilo <kbd>Menu</kbd> pausa</div>`
-      : `<div class="ctl-foot"><kbd>F</kbd> racha <kbd>Tab</kbd> estilo <kbd>Esc</kbd> pausa <kbd>M</kbd> sonido <kbd>P</kbd> ocultar</div>`);
+      : `<div class="ctl-foot"><kbd>F</kbd> racha ${mode === 'real' ? '' : '<kbd>Tab</kbd> estilo '} <kbd>Esc</kbd> pausa <kbd>M</kbd> sonido <kbd>P</kbd> ocultar</div>`);
 }
 
 // Guía "Cómo jugar": pasos numerados + cómo hacer cada efecto, por estilo de control
@@ -120,6 +142,20 @@ const HELP = {
     ],
   },
 };
+HELP.real = {
+  steps: [
+    ['Elige REALISTA', 'Antes del partido, en <b>Modo de juego</b>. La bola va más lenta, con gravedad, aire y botes reales.'],
+    ['Tu ratón es el brazo', 'La pala tiene <b>peso</b>: acelera, se pasa un poco y vuelve. La muñeca cuelga y se mueve sola.'],
+    ['Golpe = tu swing', 'Hacia arriba cierras la cara (<b>liftado</b>), hacia abajo la abres (<b>cortado</b>). La velocidad decide la profundidad.'],
+    ['Saque real', 'La bola sube desde tu mano: golpéala al caer. Debe <b>botar primero en tu campo</b> y luego en el rival.'],
+  ],
+  fx: [
+    ['t1', 'Liftado', 'Swing ↑ con latigazo', 'La muñeca cierra la cara y la bola cae rápido.'],
+    ['t2', 'Cortado', 'Swing ↓ suave', 'Flota y frena al botar.'],
+    ['t3', 'Dirección', 'Clic izq./der. o swing lateral', 'La cara apunta a ese lado.'],
+    ['t4', 'Cuidado', 'Bloquear un liftado', 'Sin swing, la bola te salta y se va larga.'],
+  ],
+};
 HELP.pad = {
   steps: [
     ['Conecta y pulsa', 'Enchufa un mando (Xbox, PlayStation o compatible) y <b>pulsa cualquier botón</b> para que el navegador lo detecte.'],
@@ -134,7 +170,7 @@ HELP.pad = {
     ['t4', 'Smash', 'Bola alta', 'Aparece el aviso «¡Smash!».'],
   ],
 };
-const helpName = k => (CONTROLS[k] ? CONTROLS[k].name : 'Mando');
+const helpName = k => (k === 'real' ? 'Realista' : CONTROLS[k] ? CONTROLS[k].name : 'Mando');
 let helpMode = 'classic';
 function renderHelp(mode = helpMode) {
   helpMode = mode;

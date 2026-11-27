@@ -147,7 +147,7 @@ export function createOnline(cb) {
     box.innerHTML = `<div class="rteam a"><h5>Equipo A</h5>${slotCard(0)}${two ? slotCard(2) : ''}</div>
       <div class="vs-badge">VS</div>
       <div class="rteam b"><h5>Equipo B</h5>${slotCard(1)}${two ? slotCard(3) : ''}</div>`;
-    $('roomMode').textContent = `${S.cfg.public ? 'Pública' : 'Privada'} · ${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target} · ${stageById(S.cfg.stage).name}`;
+    $('roomMode').textContent = `${S.cfg.public ? 'Pública' : 'Privada'} · ${two ? '2 contra 2' : '1 contra 1'} · ${S.cfg.bestOf > 1 ? 'al mejor de ' + S.cfg.bestOf : 'un juego'} · a ${S.cfg.target} · ${stageById(S.cfg.stage).name}${S.cfg.realism === 'real' ? ' · Realista' : ''}`;
   }
   function reset() {
     clearInterval(S.pingTimer);

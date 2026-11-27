@@ -4,6 +4,15 @@
 // =============================================================
 import { TABLE_H, HALF_L, HALF_W, NET_H, R, GRAV, KD, KM, SPIN_DECAY, REST, TFRIC, STEP } from './config.js';
 
+// Juegos de constantes: ARCADE (exagerado, el de siempre) y REALISTA (gravedad real, arrastre del
+// aire de una bola de 2,7 g, Magnus moderado y bote con fricción de Coulomb que convierte efecto ↔ velocidad)
+const SETS = {
+  arcade: { grav: GRAV, kd: KD, km: KM, decay: SPIN_DECAY, rest: REST, tfric: TFRIC, real: false },
+  real: { grav: 9.81, kd: 0.085, km: 0.0068, decay: 0.32, rest: 0.88, mu: 0.22, real: true },
+};
+export const PHYS = { ...SETS.arcade };
+export function setPhysics(mode) { Object.assign(PHYS, SETS[mode] || SETS.arcade); }
+
 export const EV_TABLE = 1, EV_NET = 2, EV_FLOOR = 3;
 export const sideOf = z => (z > 0 ? 0 : 1);   // 0 = jugador (z+), 1 = rival (z-)
 
@@ -17,12 +26,13 @@ export function copyBall(b) {
 // Fuerzas + integración (sin colisiones)
 export function integrate(b, dt) {
   const sp = Math.hypot(b.vx, b.vy, b.vz);
+  const KD = PHYS.kd, KM = PHYS.km;
   const ax = -KD * sp * b.vx + KM * (b.wy * b.vz - b.wz * b.vy);
-  const ay = -GRAV - KD * sp * b.vy + KM * (b.wz * b.vx - b.wx * b.vz);
+  const ay = -PHYS.grav - KD * sp * b.vy + KM * (b.wz * b.vx - b.wx * b.vz);
   const az = -KD * sp * b.vz + KM * (b.wx * b.vy - b.wy * b.vx);
   b.vx += ax * dt; b.vy += ay * dt; b.vz += az * dt;
   b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
-  const d = Math.exp(-SPIN_DECAY * dt);
+  const d = Math.exp(-PHYS.decay * dt);
   b.wx *= d; b.wy *= d; b.wz *= d;
 }
 
@@ -35,11 +45,22 @@ export function physStep(b, dt) {
   if (b.vy < 0 && py >= top - 1e-4 && b.y < top &&
       Math.abs(b.x) < HALF_W + R * 0.5 && Math.abs(b.z) < HALF_L + R * 0.5) {
     b.y = top;
-    b.vy = -b.vy * REST;
+    const vin = -b.vy;
+    b.vy = vin * PHYS.rest;
     // deslizamiento del punto de contacto: v + ω × (0,-R,0)
     const sx = b.vx + R * b.wz, sz = b.vz - R * b.wx;
-    b.vx -= TFRIC * sx; b.vz -= TFRIC * sz;
-    b.wx *= 0.65; b.wy *= 0.8; b.wz *= 0.65;
+    if (PHYS.real) {
+      // fricción de Coulomb: el impulso tangencial (≤ μ·impulso normal) frena el deslizamiento y
+      // a la vez cambia el giro (esfera hueca, I = 2/3·m·R²). Con 0,4 la bola sale rodando.
+      const sl = Math.hypot(sx, sz) || 1e-6;
+      const f = Math.min(0.4, PHYS.mu * (1 + PHYS.rest) * vin / sl);
+      const dvx = -f * sx, dvz = -f * sz;
+      b.vx += dvx; b.vz += dvz;
+      b.wx += -1.5 * dvz / R; b.wz += 1.5 * dvx / R; b.wy *= 0.85;
+    } else {
+      b.vx -= PHYS.tfric * sx; b.vz -= PHYS.tfric * sz;
+      b.wx *= 0.65; b.wy *= 0.8; b.wz *= 0.65;
+    }
     return EV_TABLE;
   }
   // Red
@@ -84,7 +105,7 @@ export function predictContact(b, side, sign, bounced) {
   const s = copyBall(b);
   const dt = 1 / 120;
   let ok = bounced, first = null;
-  const zMin = HALF_L + 0.05, zMax = HALF_L + 1.4;
+  const zMin = PHYS.real ? HALF_L - 0.22 : HALF_L + 0.05, zMax = HALF_L + 1.4;   // en realista se puede golpear encima de la mesa
   for (let t = 0; t < 2.5; t += dt) {
     const ev = physStep(s, dt);
     if (ev === EV_TABLE) { if (sideOf(s.z) !== side || ok) break; ok = true; }
@@ -127,12 +148,28 @@ function flight(st, vx, vy, vz, w) {
   return null;
 }
 
+// Igual que solveShot pero aterrizando en cualquier lado (saque realista: primer bote en tu campo)
+export function solveTo(st, tg, T, w) {
+  const ty = TABLE_H + R;
+  let vx = (tg.x - st.x) / T, vz = (tg.z - st.z) / T;
+  const vy = (ty - st.y + 0.5 * PHYS.grav * T * T) / T;
+  for (let i = 0; i < 16; i++) {
+    const s = { x: st.x, y: st.y, z: st.z, vx, vy, vz, wx: w.x, wy: w.y, wz: w.z };
+    let t = 0;
+    for (; t < 2; t += STEP) { integrate(s, STEP); if (s.vy < 0 && s.y <= ty) break; }
+    const ex = tg.x - s.x, ez = tg.z - s.z;
+    vx += ex / Math.max(0.05, t); vz += ez / Math.max(0.05, t);
+    if (ex * ex + ez * ez < 1e-5) break;
+  }
+  return { vx, vy, vz };
+}
+
 // Resuelve la velocidad inicial para aterrizar en `tg` con el efecto `w`
 // (método de disparo: simula, mide el error y corrige)
 export function solveShot(st, tg, T, w) {
   const ty = TABLE_H + R;
   let vx = (tg.x - st.x) / T, vz = (tg.z - st.z) / T;
-  let vy = (ty - st.y + 0.5 * GRAV * T * T) / T;
+  let vy = (ty - st.y + 0.5 * PHYS.grav * T * T) / T;
   for (let k = 0; k < 6; k++) {
     for (let i = 0; i < 14; i++) {
       const r = flight(st, vx, vy, vz, w);
@@ -146,4 +183,17 @@ export function solveShot(st, tg, T, w) {
     vy += 0.35;   // arco más alto para salvar la red
   }
   return { vx, vy, vz };
+}
+
+// Simulación completa (con botes y red) desde un lanzamiento: devuelve los eventos de mesa en orden
+export function simEvents(st, v, w, maxT = 2.4) {
+  const s = { x: st.x, y: st.y, z: st.z, vx: v.vx, vy: v.vy, vz: v.vz, wx: w.x, wy: w.y, wz: w.z };
+  const out = [];
+  for (let t = 0; t < maxT; t += STEP) {
+    const ev = physStep(s, STEP);
+    if (ev === EV_TABLE) { out.push({ x: s.x, z: s.z, t }); if (out.length >= 2) break; }
+    else if (ev === EV_NET) out.net = true;
+    else if (ev === EV_FLOOR) { out.floor = true; break; }
+  }
+  return out;
 }

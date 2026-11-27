@@ -19,7 +19,7 @@ export const G = {
   mode: '1v1', turn: [0, 1], count: 0, gameNo: 1,
   hand: { x: 0.4, y: 1.0, z: 1.6, vx: 0, vy: 0, tx: 0.4, ty: 1.0, roll: 0, rollTarget: 0, stretch: 0 },
   server: 0, firstServer: 0, timer: 0, rally: 0, time: 0, winner: -1,
-  ball: null, chars: [], aim: { x: 0, z: -0.9 }, flick: 0,
+  ball: null, chars: [], aim: { x: 0, z: -0.9 }, flick: 0, real: false, toss: false, tossWait: 0,
   stats: { longest: 0, smash: [0, 0], perfect: [0, 0], aces: [0, 0] },
 };
 
@@ -56,6 +56,8 @@ function makeChar(idx) {
 export function newMatch(demo, opts = {}) {
   G.demo = demo;
   G.online = !!opts.online;
+  G.real = !demo && !!opts.real;
+  P.setPhysics(G.real ? 'real' : 'arcade');
   G.mode = opts.mode || '1v1';
   G.pendingAward = null;
   G.score = [0, 0]; G.games = [0, 0]; G.gameNo = 1; G.winner = -1; G.gameEnd = false;
@@ -109,7 +111,7 @@ function startServe() {
   G.turn = [0, 0];
   G.turn[sTeam] = is2v2() ? partnerOf(server) : server;
   G.turn[1 - sTeam] = receiver;
-  G.phase = 'serve'; G.timer = 0; G.rally = 0; G.count = C.COUNTDOWN; G.countShown = -1;
+  G.phase = 'serve'; G.timer = 0; G.rally = 0; G.count = C.COUNTDOWN; G.countShown = -1; G.toss = false; G.tossWait = 0.25;
   Object.assign(G.ball, { vx: 0, vy: 0, vz: 0, wx: 0, wy: 0, wz: 0, live: true, lastHitter: -1, lastChar: -1, count: 0, net: false, sinceHit: 0, kind: 'top' });
   for (const c of G.chars) { c.pending = null; c.mood = 0; c.charging = false; c.charge = 0; c.pc = null; }
   const s = G.chars[server];
@@ -135,7 +137,7 @@ export function update(dt) {
     if (c.remote) { remoteUpdate(c, dt); continue; }
     const free = c.idx === 0 && !c.ai && G.control === 'free';
     c.freeHand = free ? G.hand : null;
-    if (free) updateHand(c, dt);
+    if (free) (G.real ? updateHandReal : updateHand)(c, dt);
     if (c.ai) aiUpdate(c, dt); else playerUpdate(c, dt);
     if (c.charging) c.charge = Math.min(1, c.charge + dt / 0.6);
     if (c.swing > 0) c.swing = Math.max(0, c.swing - dt);
@@ -173,7 +175,8 @@ export function update(dt) {
   }
 }
 
-export const freeR = c => C.FREE_HIT_R * Math.sqrt(c.pad.ctrl * c.boost.ref) * (c.fx ? c.fx.free : 1);
+export const timeScale = () => (G.real ? C.REAL.TIME_SCALE : C.TIME_SCALE);
+export const freeR = c => (G.real ? C.REAL.HIT_R : C.FREE_HIT_R) * Math.sqrt(c.pad.ctrl * c.boost.ref) * (c.fx ? c.fx.free : 1);
 const isFree = () => G.control === 'free' && G.chars[0] && !G.chars[0].ai;
 // ¿le toca a este jugador devolver la bola?
 const myTurn = c => G.ball.lastHitter === 1 - c.team && (!is2v2() || G.turn[c.team] === c.idx);
@@ -185,6 +188,7 @@ function ballStep(dt) {
     if (free && c === pc) {
       // Mano libre: la bola flota delante; se saca golpeándola con la pala
       const h = G.hand;
+      if (G.real) { tossServe(c, dt); return; }
       b.x = c.x + c.hand * 0.32;
       b.y = TABLE_H + 0.3 + Math.abs(Math.sin(G.time * 3.2)) * 0.1;
       b.z = h.z;
@@ -206,7 +210,7 @@ function ballStep(dt) {
       const f = (h.z - pz) / ((b.z - pz) || 1e-6);
       const cx = px + (b.x - px) * f, cy = py + (b.y - py) * f;
       const d = Math.hypot(cx - h.x, cy - h.y);
-      if (d < freeR(pc)) { b.x = cx; b.y = cy; b.z = h.z; freeHit(pc, d, false); }
+      if (d < freeR(pc)) { b.x = cx; b.y = cy; b.z = h.z; (G.real ? freeHitReal : freeHit)(pc, d, false); }
     }
   }
   b.sinceHit += dt;
@@ -230,6 +234,11 @@ function onBallEvent(ev) {
   if (G.phase !== 'rally') return;
   if (ev === P.EV_TABLE) {
     const s = P.sideOf(b.z);
+    if (b.srv) {   // saque realista: primero bota en el campo de quien saca
+      b.srv = false;
+      if (s !== b.lastHitter) award(1 - b.lastHitter, '¡SAQUE NULO!');
+      return;
+    }
     if (s === b.lastHitter) { award(1 - b.lastHitter, b.net ? '¡RED!' : '¡BOTE PROPIO!'); return; }
     b.count++;
     if (b.count >= 2) award(b.lastHitter, '¡DOBLE BOTE!');
@@ -352,14 +361,14 @@ export function doEmote(i, id) {
 // el receptor los gira 180° en Y (x → -x, z → -z): conserva física y efectos.
 export function ballSnapshot() {
   const b = G.ball;
-  return { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, wx: b.wx, wy: b.wy, wz: b.wz };
+  return { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, wx: b.wx, wy: b.wy, wz: b.wz, srv: b.srv ? 1 : 0 };
 }
 export function applyRemoteHit(m, li, rotate, lead = 0) {
   const b = G.ball, r = G.chars[li], s = m.b, k = rotate ? -1 : 1;
   if (!r) return;
   Object.assign(b, {
     x: k * s.x, y: s.y, z: k * s.z, vx: k * s.vx, vy: s.vy, vz: k * s.vz, wx: k * s.wx, wy: s.wy, wz: k * s.wz,
-    lastHitter: r.team, lastChar: li, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: m.kind, live: true, power: activeId(r.team),
+    lastHitter: r.team, lastChar: li, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: m.kind, live: true, power: activeId(r.team), srv: !!s.srv,
   });
   G.turn[r.team] = is2v2() ? partnerOf(li) : li;
   G.pendingAward = null;
@@ -393,14 +402,14 @@ export function setRemoteState(li, st, rotate) {
   r.net = { x: k * st.x, z: k * st.z, vx: k * st.vx, vz: k * st.vz, t: G.time };
   r.charging = !!st.ch; r.charge = st.cg || 0; r.chargeType = st.ct || 'top';
   if (st.sw !== r.netSwing) { if (r.netSwing !== undefined) { r.swing = C.SWING_DUR; r.swingType = st.swt || 'top'; r.backhand = !!st.bh; } r.netSwing = st.sw; }
-  r.freeHand = st.h ? { x: k * st.h.x, y: st.h.y, z: k * st.h.z, roll: st.h.roll, vy: st.h.vy } : null;
+  r.freeHand = st.h ? { x: k * st.h.x, y: st.h.y, z: k * st.h.z, roll: st.h.roll, vy: st.h.vy, real: !!st.h.r, pitch: st.h.p || 0, yaw: st.h.yw || 0, rz: st.h.rz || 0 } : null;
 }
 export function localState(i = 0) {
   const c = G.chars[i], h = c.freeHand;
   return {
     t: 'st', x: c.x, z: c.z, vx: c.vx, vz: c.vz, ch: c.charging ? 1 : 0, cg: +c.charge.toFixed(2), ct: c.chargeType,
     sw: c.swingCount || 0, swt: c.swingType, bh: c.backhand ? 1 : 0,
-    h: h ? { x: +h.x.toFixed(3), y: +h.y.toFixed(3), z: +h.z.toFixed(3), roll: +h.roll.toFixed(2), vy: +h.vy.toFixed(2) } : null,
+    h: h ? { x: +h.x.toFixed(3), y: +h.y.toFixed(3), z: +h.z.toFixed(3), roll: +h.roll.toFixed(2), vy: +h.vy.toFixed(2), ...(h.real ? { r: 1, p: +h.pitch.toFixed(2), yw: +h.yaw.toFixed(2), rz: +h.rz.toFixed(2) } : {}) } : null,
   };
 }
 function remoteUpdate(c, dt) {
@@ -419,7 +428,7 @@ function remoteUpdate(c, dt) {
 // ---------------- Movimiento ----------------
 function clampZone(c) {
   c.x = clamp(c.x, -C.ZONE_X, C.ZONE_X);
-  const az = clamp(c.z * c.sign, C.ZONE_Z[0], C.ZONE_Z[1]);
+  const az = clamp(c.z * c.sign, G.real ? HALF_L + 0.06 : C.ZONE_Z[0], C.ZONE_Z[1]);
   c.z = az * c.sign;
 }
 function steer(c, dvx, dvz, dt, accel = 14) {
@@ -445,6 +454,7 @@ function stepAside(c, sp, dt) {
 // Mano libre: la pala persigue al ratón con un alcance máximo desde el hombro
 function updateHand(c, dt) {
   const h = G.hand;
+  h.real = false;
   h.z = c.z - c.sign * 0.3;
   const sx = c.x + c.hand * 0.12, sy = 0.86;
   let dx = h.tx - sx, dy = h.ty - sy;
@@ -551,7 +561,7 @@ function hitBall(c, type, power, q, bias, serve) {
     let x = (opp.x * -c.sign > 0 ? -1 : 1) * rand(0.15, 0.5) * -c.sign;
     if (Math.random() < 0.3) x = rand(-0.5, 0.5);
     x *= D.aim ?? 1;
-    tg = { x, z: -c.sign * rand(serve ? 0.5 : 0.45, serve ? 1.15 : 1.2) };
+    tg = { x, z: -c.sign * (G.real && !serve ? rand(0.75, 1.25) : rand(serve ? 0.5 : 0.45, serve ? 1.15 : 1.2)) };
   } else tg = { x: G.aim.x, z: G.aim.z };
 
   let err = serve ? 0.03 : 0.03 + (1 - q) * 0.32 + power * 0.12 + (smash ? 0.06 : 0);
@@ -575,7 +585,8 @@ function hitBall(c, type, power, q, bias, serve) {
   if (c.ai && D.pace) vh *= D.pace;
   if (c.fx && c.fx.dizzy && !c.ai) { tg.x += Math.sin(G.time * 5) * 0.25; err += 0.08; }   // mareado: apunta torcido
   top *= pad.spin;
-  const side = (c.ai ? randn() * D.side : clamp(G.flick, -110, 110)) * pad.spin;
+  let side = (c.ai ? randn() * D.side : clamp(G.flick, -110, 110)) * pad.spin;
+  if (G.real) { vh *= smash ? 0.85 : 0.8; top *= 0.75; side *= 0.45; }
   launch(c, start, tg, vh, top, side, q, serve, smash, type, power);
 }
 
@@ -608,21 +619,26 @@ function freeHit(c, d, serve) {
   launch(c, { x: b.x, y: Math.max(b.y, TABLE_H + 0.05), z: b.z }, tg, vh, top, side, q, serve, smash, type, power);
 }
 
-function launch(c, start, tg, vh, top, side, q, serve, smash, type, power) {
+function launch(c, start, tg, vh, top, side, q, serve, smash, type, power, pre = null) {
   const b = G.ball;
   const dx = tg.x - start.x, dz = tg.z - start.z, dist = Math.hypot(dx, dz) || 1;
-  let T = dist / vh;
-  if (!serve) T *= 1 + (1 - q) * 0.45;     // mala sincronía = bola alta y lenta
-  const ux = dx / dist, uz = dz / dist;
-  // golpe perfecto = la bola sale con un extra de efecto (se nota en la parábola y la comba)
-  if (!serve && !smash && q > 0.75) { top *= 1.2; side *= 1.25; }
-  const w = { x: top * uz, y: side, z: -top * ux };   // liftado/cortado alrededor de (up × dir)
-  const v = P.solveShot(start, tg, T, w);
-  if (!serve && q < 0.25 && Math.random() < 0.5) v.vy -= (0.25 - q) * 4 * Math.random();
+  let v, w;
+  if (pre) ({ v, w } = pre);
+  else if (serve && G.real) ({ v, w } = realServe(c, start, power, top, side, tg.x));
+  else {
+    let T = dist / vh;
+    if (!serve) T *= 1 + (1 - q) * 0.45;     // mala sincronía = bola alta y lenta
+    const ux = dx / dist, uz = dz / dist;
+    // golpe perfecto = la bola sale con un extra de efecto (se nota en la parábola y la comba)
+    if (!serve && !smash && q > 0.75) { top *= 1.2; side *= 1.25; }
+    w = { x: top * uz, y: side, z: -top * ux };   // liftado/cortado alrededor de (up × dir)
+    v = P.solveShot(start, tg, T, w);
+    if (!serve && q < 0.25 && Math.random() < 0.5) v.vy -= (0.25 - q) * 4 * Math.random();
+  }
 
   Object.assign(b, {
     x: start.x, y: start.y, z: start.z, vx: v.vx, vy: v.vy, vz: v.vz, wx: w.x, wy: w.y, wz: w.z,
-    lastHitter: c.team, lastChar: c.idx, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: smash ? 'smash' : type, live: true, power: activeId(c.team),
+    lastHitter: c.team, lastChar: c.idx, count: 0, net: false, sinceHit: 0, hitId: b.hitId + 1, kind: smash ? 'smash' : type, live: true, power: activeId(c.team), srv: serve && G.real,
   });
   G.turn[c.team] = is2v2() ? partnerOf(c.idx) : c.idx;
   for (const o of G.chars) { o.pc = null; o.pcTimer = 0; }
@@ -632,6 +648,116 @@ function launch(c, start, tg, vh, top, side, q, serve, smash, type, power) {
   if (smash) G.stats.smash[c.team]++;
   if (grade === 'perfect') G.stats.perfect[c.team]++;
   emit('hit', { c: c.idx, team: c.team, type, smash, power, q, grade, serve, side, x: b.x, y: b.y, z: b.z });
+}
+
+// =============== MODO REALISTA ===============
+// Brazo suelto: la pala persigue al ratón con un muelle amortiguado (inercia, se pasa y vuelve) y la
+// muñeca tiene tres ángulos con su propia inercia:
+//   pitch = cara abierta/cerrada (el swing ↑ la cierra, el ↓ la abre; al acelerar se queda atrás y luego «latiguea»)
+//   rz    = cabeza de la pala inclinada en el plano (cuelga de la muñeca)
+//   yaw   = hacia dónde mira la cara (clic izq./der. o Q/E la giran poco a poco, el swing lateral también)
+const spring = (x, v, target, k, z, dt, extra = 0) => { const a = k * (target - x) - 2 * z * Math.sqrt(k) * v + extra; v += a * dt; return [x + v * dt, v]; };
+function updateHandReal(c, dt) {
+  const h = G.hand;
+  h.real = true;
+  h.z = c.z - c.sign * 0.3;
+  const sx = c.x + c.hand * 0.12, sy = 0.86;
+  let dx = h.tx - sx, dy = h.ty - sy;
+  const L = Math.hypot(dx, dy), reach = C.REAL.REACH * c.boost.reach;
+  if (L > reach) { dx *= reach / L; dy *= reach / L; }
+  const tx = sx + dx, ty = Math.max(TABLE_H - 0.25, sy + dy);
+  const K = 230, Z = 0.72;
+  const ax = K * (tx - h.x) - 2 * Z * Math.sqrt(K) * h.vx, ay = K * (ty - h.y) - 2 * Z * Math.sqrt(K) * h.vy;
+  h.vx += ax * dt; h.vy += ay * dt;
+  const sp = Math.hypot(h.vx, h.vy); if (sp > 9) { h.vx *= 9 / sp; h.vy *= 9 / sp; }
+  h.x += h.vx * dt; h.y += h.vy * dt;
+  h.stretch = Math.min(1, L / reach);
+  h.roll += (h.rollTarget - h.roll) * Math.min(1, dt * 5);          // la muñeca gira poco a poco
+  h.pitchT = clamp(h.vy * 0.13, -0.75, 0.75);
+  [h.pitch, h.pitchV] = spring(h.pitch || 0, h.pitchV || 0, h.pitchT, 150, 0.5, dt, -ay * 0.45);
+  [h.rz, h.rzV] = spring(h.rz || 0, h.rzV || 0, h.roll * 0.45, 110, 0.4, dt, ax * 0.4);
+  [h.yaw, h.yawV] = spring(h.yaw || 0, h.yawV || 0, clamp(h.roll * 0.38 + h.vx * 0.045, -0.6, 0.6), 120, 0.6, dt);
+  h.pitch = clamp(h.pitch, -1.2, 1.2); h.rz = clamp(h.rz, -1.3, 1.3);
+}
+// Saque realista: la bola se lanza al aire desde la palma y hay que golpearla al caer
+function tossServe(c, dt) {
+  const b = G.ball, h = G.hand;
+  if (!G.toss) {
+    b.x = c.x + c.hand * 0.3; b.y = TABLE_H + 0.12; b.z = h.z;
+    b.vx = b.vy = b.vz = 0; b.wx = b.wy = b.wz = 0;
+    if (G.count <= 0 && (G.tossWait -= dt) <= 0) { G.toss = true; b.vy = 2.9; emit('toss', {}); }
+    return;
+  }
+  b.vy -= P.PHYS.grav * dt; b.y += b.vy * dt; b.z = h.z;
+  if (Math.hypot(b.x - h.x, b.y - h.y) < freeR(c) * 0.85 && Math.hypot(h.vx, h.vy) > 0.7) { freeHitReal(c, 0, true); return; }
+  if (b.y < TABLE_H + 0.06 && b.vy < 0) { G.toss = false; G.tossWait = 0.35; }   // se le cae: vuelve a lanzarla
+}
+// efecto que trae la bola alrededor del eje lateral (liftado > 0)
+function incomingTop(b) {
+  const n = Math.hypot(b.vx, b.vz) || 1, ux = b.vx / n, uz = b.vz / n;
+  return b.wx * uz - b.wz * ux;
+}
+// El golpe sale del movimiento real de la pala: velocidad del brazo + latigazo de muñeca
+function freeHitReal(c, d, serve) {
+  const b = G.ball, h = G.hand, pad = c.pad;
+  c.pending = null;
+  let q = serve ? 1 : clamp(1 - d / freeR(c), 0, 1);
+  if (c.fx && c.fx.magnet) q = Math.max(q, 0.85);
+  const whip = 0.16 * (Math.abs(h.pitchV || 0) + Math.abs(h.rzV || 0)) * 0.5;   // velocidad extra de la cabeza de la pala
+  const swing = Math.hypot(h.vx, h.vy) + whip;
+  const brush = 1 + Math.min(1, whip / 1.2) * 0.6;                                // la muñeca multiplica el efecto
+  let top = clamp(h.vy * 24 * brush + (h.pitchV || 0) * 2, -120, 130) * pad.spin;
+  const side = clamp(-(h.vx * 11 + (h.yaw || 0) * 30), -70, 70) * pad.spin;
+  const start = { x: b.x, y: Math.max(b.y, TABLE_H + 0.05), z: b.z };
+  // hacia dónde mira la cara + desvío si le das descentrada
+  const yaw = clamp((h.yaw || 0) + (serve ? 0 : (b.x - h.x) * 1.4), -0.75, 0.75);
+  const type = top < -10 ? 'back' : 'top';
+  c.swing = C.SWING_DUR; c.swingType = type;
+  if (serve) {
+    G.phase = 'rally';
+    const power = clamp(0.15 + swing / 6, 0.15, 1);
+    launch(c, start, { x: b.x * 0.3 + Math.sin(yaw) * 1.2, z: -c.sign }, 0, top * 0.6, side * 0.6, 1, true, false, type, power);
+    return;
+  }
+  const vin = Math.abs(b.vz);
+  let hs = (0.38 * vin + 1.1 + 0.85 * swing) * pad.speed * c.boost.str * (0.7 + 0.3 * q);   // rebote en la goma + empuje
+  const smash = b.y > TABLE_H + C.SMASH_H && (h.vy < -1.2 || swing > 3.4);
+  if (smash) { hs = Math.max(hs, 7.2) * pad.smash; top = 25; }
+  const power = clamp((hs - 2) / 7, 0, 1);
+  // los golpes rápidos van al fondo (y si te pasas, se van largos)
+  const depth = clamp(0.78 + (hs - 3) * 0.1, 0.65, 1.25);
+  const tz = -c.sign * depth, dist = Math.abs(tz - start.z);
+  const tg = { x: start.x * 0.35 + Math.sin(yaw) * dist * 0.75, z: tz };
+  const dx = tg.x - start.x, dz = tg.z - start.z, dd = Math.hypot(dx, dz) || 1;
+  const w = { x: top * dz / dd, y: side, z: -top * dx / dd };
+  const v = P.solveShot(start, tg, dd / Math.min(hs, 8.5), w);
+  if (hs > 8.5) { const k = Math.pow(hs / 8.5, 0.8); v.vx *= k; v.vz *= k; }           // demasiado fuerte: se va largo
+  v.vy -= ((h.pitch || 0) - (h.pitchT || 0)) * 1.1;                                       // cara más cerrada/abierta de la cuenta
+  v.vy += incomingTop(b) * 0.004 * (1 - Math.min(1, swing / 4));                          // el liftado rival hace saltar un bloqueo
+  const err = (1 - q) * 0.6 / pad.ctrl;
+  v.vy += randn() * err * 0.5; v.vx += randn() * err * 0.6;
+  launch(c, start, tg, hs, top, side, q, false, smash, type, power, { v, w });
+}
+// Saque reglamentario: bota primero en tu campo y luego en el rival. Busca la combinación que mejor encaja
+function realServe(c, start, power, top, side, aimX) {
+  const own = c.sign, want = { x: clamp(aimX, -C.HALF_W + 0.15, C.HALF_W - 0.15), z: -own * (0.55 + 0.6 * power) };
+  const dx = want.x - start.x, dz = want.z - start.z, dd = Math.hypot(dx, dz) || 1;
+  const w = { x: top * dz / dd, y: side, z: -top * dx / dd };
+  let best = null, bestS = 1e9;
+  for (const zo of [0.12, 0.25, 0.4, 0.55, 0.7, 0.85]) {
+    const f = (start.z - own * zo) / (start.z - want.z || 1);
+    const tgOwn = { x: start.x + dx * f, z: own * zo };
+    for (const T of [0.12, 0.17, 0.22, 0.28, 0.35, 0.44, 0.55, 0.7]) {
+      const v = P.solveTo(start, tgOwn, T, w);
+      const ev = P.simEvents(start, v, w);
+      let s;
+      if (ev.length >= 2 && P.sideOf(ev[0].z) === c.team && P.sideOf(ev[1].z) !== c.team && Math.abs(ev[1].x) < C.HALF_W && Math.abs(ev[1].z) < HALF_L)
+        s = Math.hypot(ev[1].x - want.x, ev[1].z - want.z) + (ev.net ? 2 : 0);
+      else s = 50 + Math.abs(T - 0.4) + Math.abs(zo - 0.3);   // si ninguno es legal, al menos un saque normal
+      if (s < bestS) { bestS = s; best = v; }
+    }
+  }
+  return { v: best, w };
 }
 
 // ---------------- IA ----------------

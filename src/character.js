@@ -1117,7 +1117,8 @@ export function createCharacter(lookIn, { rotationY = 0, referee = false } = {})
       root.updateMatrixWorld(true);
       tmp.set(fh.x, fh.y, fh.z);
       armPivot.worldToLocal(tmp);
-      paddle.rotation.set(Math.max(-0.7, Math.min(0.7, -fh.vy * 0.09)), 0, fh.roll * 0.55);
+      if (fh.real) paddle.rotation.set(-fh.pitch, fh.yaw * c.sign * -1, fh.rz * 0.9 + fh.yaw * 0.2);   // realista: muñeca suelta
+      else paddle.rotation.set(Math.max(-0.7, Math.min(0.7, -fh.vy * 0.09)), 0, fh.roll * 0.55);
       upV.set(0, 0.16, 0).applyEuler(paddle.rotation);
       handL.copy(tmp).sub(upV);
       const L = Math.max(0.12, handL.length());

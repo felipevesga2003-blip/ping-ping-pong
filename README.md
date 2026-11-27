@@ -11,6 +11,17 @@ Ping pong arcade 3D con estilo cartoon, física de efecto real, frijolitos perso
 - **Contra la CPU**: 1 contra 1 o 2 contra 2 (con compañero CPU), al mejor de 1/3/5 juegos, a 5/7/11/21 puntos (prelobby).
 - **Online**: 1 contra 1 o 2 contra 2 con hasta 4 jugadores; los huecos libres los ocupa la CPU.
 
+### Arcade o Realista (se elige en el prelobby, también online)
+- **Arcade**: el de siempre: rápido, efectos exagerados, cualquier estilo de control.
+- **Realista**: ritmo más lento (×0,66), gravedad real, arrastre del aire, Magnus moderado y bote con
+  fricción de Coulomb (el efecto se convierte en velocidad al botar y al revés). Obliga a **mano libre**, con:
+  - brazo con inercia (muelle amortiguado: acelera, se pasa y vuelve) y pala más pequeña;
+  - muñeca con tres ángulos propios (cara abierta/cerrada, inclinación y orientación) que «latiguean»
+    al acelerar y frenar: el latigazo suma velocidad y efecto;
+  - el golpe sale del swing: rebote en la goma + empuje; si te pasas de fuerza, la bola se va larga;
+    bloquear un liftado sin swing hace saltar la bola;
+  - saque reglamentario: la bola sube desde la mano y debe botar primero en tu campo.
+
 ### Escenarios
 Antes de cada partido (prelobby) eliges entre **10 sedes**, con vista previa en directo detrás del menú, o **Aleatorio**:
 Parque · Favela (morro con casitas y cometas) · Playa · Estadio Ponglímpico (la ola y pebetero) · El Infierno (lava y diablillos) ·
