@@ -509,7 +509,85 @@ function openSettings(on) {
 $('setMusic').addEventListener('input', e => { settings.music = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
 $('setSfx').addEventListener('input', e => { settings.sfx = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
 $('setSfx').addEventListener('change', () => SFX.paddle(0.5));
-$('setFov').addEventListener('input', e => { settings.fov = +e.target.value; applySettings(); refreshSettingsUI(); });
+$('setFov').addEventListener('input', e => { settings.fov = +e.target.value; applySettings(); refreshSettingsUI(); fovPreview(true); });
+// ---------- Vista previa del FOV: diorama de cubitos con la cámara de 3ª y de 1ª persona ----------
+let fovPv = null, fovPvHide = 0, fovPvOn = false;
+function buildFovPreview() {
+  const cv = $('fovPrevCv');
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
+  r.setPixelRatio(1); r.setClearColor(0xf2eadb);
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight(0xffffff, 0xcfc2a8, 1.5));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.6); dl.position.set(2.5, 5, 3); sc.add(dl);
+  const INKC = 0x111111, edgeM = new THREE.LineBasicMaterial({ color: INKC });
+  const cube = (w, h, d, col, x, y, z, edges = true) => {
+    const g = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: col, flatShading: true }));
+    m.position.set(x, y, z); sc.add(m);
+    if (edges) m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeM));
+    return m;
+  };
+  // suelo de papel con la pista dibujada
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshLambertMaterial({ color: 0xdccfb5 })); floor.rotation.x = -Math.PI / 2; sc.add(floor);
+  const court = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 7.6), new THREE.MeshLambertMaterial({ color: 0xf2eadb })); court.rotation.x = -Math.PI / 2; court.position.y = 0.002; sc.add(court);
+  const sun = new THREE.Mesh(new THREE.CircleGeometry(1.9, 48), new THREE.MeshLambertMaterial({ color: 0xe8301f })); sun.rotation.x = -Math.PI / 2; sun.position.y = 0.003; sc.add(sun);   // el sol rojo del menú, bajo la mesa
+  const courtLine = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(4.4, 7.6)), edgeM); courtLine.rotation.x = -Math.PI / 2; courtLine.position.y = 0.004; sc.add(courtLine);
+  // mesa
+  const top = cube(C.HALF_W * 2, 0.05, C.HALF_L * 2, 0x2f7df6, 0, C.TABLE_H - 0.025, 0);
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cube(0.05, C.TABLE_H - 0.05, 0.05, 0x111111, x * (C.HALF_W - 0.12), (C.TABLE_H - 0.05) / 2, z * (C.HALF_L - 0.2), false);
+  const line = (w, d, x, z) => cube(w, 0.004, d, 0xffffff, x, C.TABLE_H + 0.002, z, false);
+  line(C.HALF_W * 2, 0.02, 0, C.HALF_L - 0.01); line(C.HALF_W * 2, 0.02, 0, -C.HALF_L + 0.01); line(0.01, C.HALF_L * 2, 0, 0);
+  line(0.02, C.HALF_L * 2, C.HALF_W - 0.01, 0); line(0.02, C.HALF_L * 2, -C.HALF_W + 0.01, 0);
+  cube(C.HALF_W * 2 + 0.3, C.NET_H, 0.012, 0xffffff, 0, C.TABLE_H + C.NET_H / 2, 0);
+  // jugadores: cubito con «cabeza» y pala roja
+  const player = (col, x, z, s) => {
+    const g = new THREE.Group(); sc.add(g);
+    const body = cube(0.46, 0.78, 0.4, col, 0, 0.39, 0); g.add(body);
+    const head = cube(0.34, 0.3, 0.32, 0xffd166, 0, 0.93, 0); g.add(head);
+    const pad = cube(0.18, 0.2, 0.025, 0xe8301f, -0.36 * s, 0.85, -0.25 * s); g.add(pad);
+    g.position.set(x, 0, z); return g;
+  };
+  const me = player(0xffc629, 0.25, C.HALF_L + 0.55, 1), rival = player(0xe8301f, -0.25, -C.HALF_L - 0.6, -1);
+  rival.rotation.y = Math.PI;
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), new THREE.MeshLambertMaterial({ color: 0xffc629 })); sc.add(ball);
+  const ballRing = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 10), new THREE.MeshBasicMaterial({ color: INKC, side: THREE.BackSide })); ball.add(ballRing);
+  const cam3 = new THREE.PerspectiveCamera(46, 600 / 350, 0.05, 60), cam1 = new THREE.PerspectiveCamera(66, 600 / 350, 0.05, 60);
+  fovPv = { r, sc, cam3, cam1, me, top, ball, t: 0 };
+}
+function fovPreview(show) {
+  if (show) {
+    fovPvHide = 0;
+    if (!fovPvOn) { fovPvOn = true; $('fovPrev').classList.add('on'); if (!fovPv) buildFovPreview(); requestAnimationFrame(fovPreviewFrame); }
+  } else fovPvHide = performance.now() + 1600;   // se queda un momento al soltar
+}
+let fovPvLast = 0;
+function fovPreviewFrame(now) {
+  if (!fovPvOn) return;
+  if ((fovPvHide && now > fovPvHide) || !settingsOpen) { fovPvOn = false; fovPvHide = 0; $('fovPrev').classList.remove('on'); return; }
+  const dt = Math.min(0.05, (now - (fovPvLast || now)) / 1000); fovPvLast = now;
+  const P = fovPv, f = Math.max(50, Math.min(90, +settings.fov || 66));
+  $('fovPrevV').textContent = f + '°'; $('fovPrev3').textContent = (f - 20) + '°'; $('fovPrev1').textContent = f + '°';
+  // mesa del color del escenario actual; jugador con tu camiseta
+  const st = stageById(arena.stage); if (st && st.table) P.top.material.color.setHex(st.table[0]);
+  P.me.children[0].material.color.set(settings.look.shirtColor || '#ffc629');
+  // la bola va y viene en arco por encima de la red
+  P.t += dt * 0.55; const k = (Math.sin(P.t * Math.PI) + 1) / 2;
+  P.ball.position.set(-0.2 + k * 0.45, C.TABLE_H + 0.06 + Math.abs(Math.sin(P.t * Math.PI * 2)) * 0.32, (k - 0.5) * 2 * (C.HALF_L + 0.2));
+  // 3ª persona: misma colocación que en el partido, con el zoom guardado
+  const t = Math.max(0, Math.min(1, ((+settings.zoom || 0.55) - FP_ZOOM) / (1 - FP_ZOOM)));
+  P.cam3.fov = f - 20; P.cam3.position.set(0.25 * (0.6 - t * 0.25) + 0.35, 1.75 + t * 1.95, C.HALF_L + 0.55 + 1.0 + t * 2.4); P.cam3.lookAt(0.03, 0.4 + (1 - t) * 0.2, -0.4 - t * 0.45); P.cam3.updateProjectionMatrix();
+  // 1ª persona: ojos del jugador (su cubito no se ve, como en el juego)
+  P.cam1.fov = f; P.cam1.position.set(0.25 + 0.24, 1.32, C.HALF_L + 0.55 + 0.95); P.cam1.lookAt(0.05, 0.36, -1.4); P.cam1.updateProjectionMatrix();
+  const r = P.r; r.setScissorTest(true);
+  P.me.visible = true; r.setViewport(0, 350, 600, 350); r.setScissor(0, 350, 600, 350); r.render(P.sc, P.cam3);
+  P.me.children[0].visible = P.me.children[1].visible = false;
+  r.setViewport(0, 0, 600, 350); r.setScissor(0, 0, 600, 350); r.render(P.sc, P.cam1);
+  P.me.children[0].visible = P.me.children[1].visible = true;
+  requestAnimationFrame(fovPreviewFrame);
+}
+$('setFov').addEventListener('pointerdown', () => fovPreview(true));
+$('setFov').addEventListener('focus', () => fovPreview(true));
+addEventListener('pointerup', () => { if (fovPvOn) fovPreview(false); });
+$('setFov').addEventListener('blur', () => fovPreview(false));
 document.querySelectorAll('#settings .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   settings[s.dataset.k] = b.dataset.v; applySettings(); SFX.blip();

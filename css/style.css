@@ -776,3 +776,17 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 
 /* la pala del Taller: mango del tono de madera elegido */
 .pad-swatch::after { background: var(--w, var(--paper-2)); }
+
+/* Vista previa del FOV: aparece a la derecha de Ajustes al tocar el deslizador */
+.fov-prev { position: absolute; right: clamp(16px, 5vw, 80px); top: 50%; width: min(330px, 30vw); z-index: 3; pointer-events: none;
+  opacity: 0; transform: translate(26px, -50%) rotate(1.5deg); transition: opacity .22s var(--ease), transform .32s var(--snap); }
+.fov-prev.on { opacity: 1; transform: translate(0, -50%) rotate(0deg); }
+.fov-prev .fp-kicker { display: inline-block; padding: 5px 10px; background: var(--ink); color: var(--yellow); font: 700 10.5px var(--jost); letter-spacing: .26em; text-transform: uppercase; }
+.fov-prev .fp-kicker b { color: var(--paper); font-weight: 800; }
+.fov-prev .fp-views { position: relative; margin-top: 8px; border: 3px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 var(--red); }
+.fov-prev canvas { display: block; width: 100%; height: auto; }
+.fov-prev .fp-views::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 3px solid var(--ink); }
+.fov-prev .fp-tag { position: absolute; left: 0; padding: 4px 8px; background: var(--ink); color: var(--paper); font: 700 9.5px var(--jost); letter-spacing: .2em; text-transform: uppercase; font-style: normal; }
+.fov-prev .fp-tag u { text-decoration: none; color: var(--yellow); margin-left: 4px; }
+.fov-prev .fp-tag.t3 { top: 0; } .fov-prev .fp-tag.t1 { top: calc(50% + 1px); }
+@media (max-width: 900px) { .fov-prev { display: none; } }
