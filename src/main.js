@@ -82,7 +82,7 @@ const ballPos = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
 
 // ---------- Ajustes ----------
-const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', realism: 'arcade', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1 };
+const settings = { diff: 1, target: 11, assist: 1, mode: '1v1', bestOf: 1, visibility: 'private', stage: 'park', control: 'classic', realism: 'arcade', zoom: 0.55, music: 0.3, sfx: 0.8, quality: 'high', aids: 1, showControls: 1, fov: 66, dynFov: 1 };
 // El modo realista obliga a jugar con mano libre (sin tocar la preferencia guardada del jugador)
 let matchReal = false;
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ppp-settings') || '{}')); } catch (e) { /* sin storage */ }
@@ -495,6 +495,7 @@ function applyAudioSettings() { setMusicVolume(+settings.music); setSfxVolume(+s
 function refreshSettingsUI() {
   $('setMusic').value = Math.round(settings.music * 100); $('setMusicV').textContent = Math.round(settings.music * 100);
   $('setSfx').value = Math.round(settings.sfx * 100); $('setSfxV').textContent = Math.round(settings.sfx * 100);
+  $('setFov').value = +settings.fov; $('setFovV').textContent = (+settings.fov) + '°';
   document.querySelectorAll('#settings .seg2[data-k]').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(settings[s.dataset.k]) === b.dataset.v)));
   $('fsBtn').textContent = document.fullscreenElement ? 'Salir' : 'Activar';
 }
@@ -505,6 +506,7 @@ function openSettings(on) {
 $('setMusic').addEventListener('input', e => { settings.music = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
 $('setSfx').addEventListener('input', e => { settings.sfx = e.target.value / 100; applyAudioSettings(); applySettings(); refreshSettingsUI(); });
 $('setSfx').addEventListener('change', () => SFX.paddle(0.5));
+$('setFov').addEventListener('input', e => { settings.fov = +e.target.value; applySettings(); refreshSettingsUI(); });
 document.querySelectorAll('#settings .seg2[data-k]').forEach(s => s.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   settings[s.dataset.k] = b.dataset.v; applySettings(); SFX.blip();
@@ -1087,7 +1089,7 @@ addEventListener('wheel', e => {
 const camPos = new THREE.Vector3(5, 3, 5), camLook = new THREE.Vector3(0, 0.8, 0);
 const camTarget = new THREE.Vector3(), lookTarget = new THREE.Vector3();
 // Dinamismo de cámara: pequeño «punch» en cada golpe, acercamiento lento durante el peloteo y al ganar el punto
-let camPunch = 0, camPoint = 0, camRally = 0;
+let camPunch = 0, camPoint = 0, camRally = 0, fovDyn = 0;
 function updateCamera(dt) {
   setFP(screen !== 'menu' && !G.demo && camZoom < FP_ZOOM);
   if (camTagTimer > 0 && (camTagTimer -= dt) <= 0) $('camTag').classList.remove('on');
@@ -1125,7 +1127,20 @@ function updateCamera(dt) {
   const k = 1 - Math.exp(-(posing() ? 5 : screen === 'menu' ? 1.5 : fpActive ? 10 : 4) * dt);
   camPos.lerp(camTarget, k); camLook.lerp(lookTarget, k);
   camPunch *= Math.exp(-7 * dt); camPoint *= Math.exp(-1.4 * dt);
-  const fov = (fpActive ? 66 : 46) - (fpActive || screen !== 'game' ? 0 : camPunch * 1.8 + camPoint * 2.2 + camRally * 1.2);
+  // FOV base del ajuste (1ª persona; la cámara normal usa 20° menos)
+  const fovBase = screen === 'menu' || posing() ? (fpActive ? 66 : 46) : Math.max(50, Math.min(90, +settings.fov || 66)) - (fpActive ? 0 : 20);
+  // FOV dinámico: se abre cuando la bola viene hacia mí y se cierra cuando está en el otro campo
+  let dyn = 0;
+  const playing = screen === 'game' && !G.demo && !posing();
+  if (playing && +settings.dynFov) {
+    const b = G.ball, live = G.phase === 'rally' && Number.isFinite(b.z);
+    const near = live ? Math.max(0, Math.min(1, (b.z + C.HALF_L) / (2 * C.HALF_L + 0.5))) : 0.45;   // 0 = fondo rival · 1 = en mi pala
+    const coming = live && b.lastHitter === 1 ? 1 : 0.55;
+    dyn = (-3 + near * 8 * coming) * (fpActive ? 1 : 0.45);
+    if (!fpActive) dyn -= camPunch * 1.8 + camPoint * 2.2 + camRally * 1.2;
+  }
+  fovDyn += (dyn - fovDyn) * Math.min(1, dt * 3.5);
+  const fov = fovBase + fovDyn;
   if (Math.abs(camera.fov - fov) > 0.02) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
   camera.position.copy(camPos);
   if (shake > 0.001) {
