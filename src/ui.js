@@ -33,8 +33,8 @@ export const CONTROLS = {
       ['Swing ↑', 'Golpe con <b class="c-top">liftado</b> y potencia'],
       ['Swing ↓', 'Golpe con <b class="c-back">cortado</b>'],
       ['Swing ↔', '<b class="c-curve">Efecto lateral</b> (curva)'],
-      ['Clic izq.', 'Gira la pala ← · dirige y curva'],
-      ['Clic der.', 'Gira la pala → · dirige y curva'],
+      ['Clic izq.', 'Gira la pala sobre el mango ← · dirige y curva'],
+      ['Clic der.', 'Gira la pala sobre el mango → · dirige y curva'],
       ['Bola alta', 'Swing fuerte = <b class="c-smash">smash</b>'],
       ['Rueda', 'Cámara · al tope, 1ª persona'],
       ['1 – 6', 'Emotes: baile, risa, burla, llanto…'],
@@ -45,12 +45,13 @@ export const CONTROLS = {
 CONTROLS.real = {
   name: 'Realista',
   rows: [
-    ['Ratón', 'Es tu brazo: tiene peso, se pasa y vuelve'],
+    ['Ratón', 'Tu brazo · arriba en pantalla = pala adelantada'],
+    ['Empujar', 'Adelantar al golpear = más rápido · retirar = amortiguar'],
     ['Swing ↑', '<b class="c-top">Liftado</b> · la muñeca cierra la cara'],
     ['Swing ↓', '<b class="c-back">Cortado</b> · la cara se abre'],
     ['Velocidad', 'Más rápido = más fondo… o se va larga'],
     ['Latigazo', 'Acelera y frena en seco: la muñeca suma efecto'],
-    ['Clics', 'Izq. / der.: gira la muñeca y dirige'],
+    ['Clics', 'Giran la pala sobre el mango: dirige y da efecto'],
     ['Saque', 'La bola sube sola: golpéala al caer'],
     ['Rueda', 'Cámara · al tope, 1ª persona'],
   ],
@@ -145,7 +146,7 @@ const HELP = {
 HELP.real = {
   steps: [
     ['Elige REALISTA', 'Antes del partido, en <b>Modo de juego</b>. La bola va más lenta, con gravedad, aire y botes reales.'],
-    ['Tu ratón es el brazo', 'La pala tiene <b>peso</b>: acelera, se pasa un poco y vuelve. La muñeca cuelga y se mueve sola.'],
+    ['Tu ratón es el brazo', 'Subir el cursor <b>adelanta</b> la pala y bajarlo la <b>recoge</b>. Empuja al golpear para dar velocidad o retírala para amortiguar.'],
     ['Golpe = tu swing', 'Hacia arriba cierras la cara (<b>liftado</b>), hacia abajo la abres (<b>cortado</b>). La velocidad decide la profundidad.'],
     ['Saque real', 'La bola sube desde tu mano: golpéala al caer. Debe <b>botar primero en tu campo</b> y luego en el rival.'],
   ],

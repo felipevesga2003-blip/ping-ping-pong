@@ -88,7 +88,7 @@ export function setControl(mode) {
   c.charging = false; c.charge = 0; c.pending = null;
   const h = G.hand;
   h.x = h.tx = c.x + c.hand * 0.35; h.y = h.ty = 1.0; h.z = c.z - c.sign * 0.3;
-  h.vx = h.vy = 0; h.roll = h.rollTarget = 0; h.stretch = 0;
+  h.vx = h.vy = h.vz = 0; h.roll = h.rollTarget = 0; h.stretch = 0; h.tdepth = 0.3; h.zs = h.z;
 }
 export function setPaddle(i, type) { if (G.chars[i]) G.chars[i].pad = C.PADDLES[type] || C.PADDLES.balanced; }
 
@@ -203,11 +203,12 @@ function ballStep(dt) {
   if (!b.live || G.phase === 'over') return;
   const px = b.x, py = b.y, pz = b.z;
   const ev = P.physStep(b, dt);
-  // Mano libre: choque real bola ↔ pala al cruzar el plano de la pala
+  // Mano libre: choque real bola ↔ pala al cruzar el plano de la pala (que también puede avanzar o retroceder)
+  const hz0 = G.hand.zs ?? G.hand.z; G.hand.zs = G.hand.z;
   if (free && G.phase === 'rally' && myTurn(pc) && b.count === 1) {
-    const h = G.hand;
-    if ((pz - h.z) * pc.sign < 0 && (b.z - h.z) * pc.sign >= 0) {
-      const f = (h.z - pz) / ((b.z - pz) || 1e-6);
+    const h = G.hand, r0 = pz - hz0, r1 = b.z - h.z;
+    if (r0 * pc.sign < 0 && r1 * pc.sign >= 0) {
+      const f = r0 / ((r0 - r1) || 1e-6);
       const cx = px + (b.x - px) * f, cy = py + (b.y - py) * f;
       const d = Math.hypot(cx - h.x, cy - h.y);
       if (d < freeR(pc)) { b.x = cx; b.y = cy; b.z = h.z; (G.real ? freeHitReal : freeHit)(pc, d, false); }
@@ -402,14 +403,14 @@ export function setRemoteState(li, st, rotate) {
   r.net = { x: k * st.x, z: k * st.z, vx: k * st.vx, vz: k * st.vz, t: G.time };
   r.charging = !!st.ch; r.charge = st.cg || 0; r.chargeType = st.ct || 'top';
   if (st.sw !== r.netSwing) { if (r.netSwing !== undefined) { r.swing = C.SWING_DUR; r.swingType = st.swt || 'top'; r.backhand = !!st.bh; } r.netSwing = st.sw; }
-  r.freeHand = st.h ? { x: k * st.h.x, y: st.h.y, z: k * st.h.z, roll: st.h.roll, vy: st.h.vy, real: !!st.h.r, pitch: st.h.p || 0, yaw: st.h.yw || 0, rz: st.h.rz || 0 } : null;
+  r.freeHand = st.h ? { x: k * st.h.x, y: st.h.y, z: k * st.h.z, roll: st.h.roll, vy: st.h.vy, real: !!st.h.r, pitch: st.h.p || 0, yaw: st.h.yw || 0, rz: st.h.rz || 0, twist: st.h.tw || 0 } : null;
 }
 export function localState(i = 0) {
   const c = G.chars[i], h = c.freeHand;
   return {
     t: 'st', x: c.x, z: c.z, vx: c.vx, vz: c.vz, ch: c.charging ? 1 : 0, cg: +c.charge.toFixed(2), ct: c.chargeType,
     sw: c.swingCount || 0, swt: c.swingType, bh: c.backhand ? 1 : 0,
-    h: h ? { x: +h.x.toFixed(3), y: +h.y.toFixed(3), z: +h.z.toFixed(3), roll: +h.roll.toFixed(2), vy: +h.vy.toFixed(2), ...(h.real ? { r: 1, p: +h.pitch.toFixed(2), yw: +h.yaw.toFixed(2), rz: +h.rz.toFixed(2) } : {}) } : null,
+    h: h ? { x: +h.x.toFixed(3), y: +h.y.toFixed(3), z: +h.z.toFixed(3), roll: +h.roll.toFixed(2), vy: +h.vy.toFixed(2), ...(h.real ? { r: 1, p: +h.pitch.toFixed(2), yw: +h.yaw.toFixed(2), rz: +h.rz.toFixed(2), tw: +(h.twist || 0).toFixed(2) } : {}) } : null,
   };
 }
 function remoteUpdate(c, dt) {
@@ -665,7 +666,9 @@ const spring = (x, v, target, k, z, dt, extra = 0) => { const a = k * (target - 
 function updateHandReal(c, dt) {
   const h = G.hand;
   h.real = true;
-  h.z = c.z - c.sign * 0.3;
+  // profundidad: el ratón arriba adelanta la pala, abajo la recoge junto al cuerpo
+  const tzd = c.z - c.sign * (0.08 + clamp(h.tdepth ?? 0.3, 0.02, 0.7));
+  if (!Number.isFinite(h.vz)) h.vz = 0;
   const sx = c.x + c.hand * 0.12, sy = 0.86;
   let dx = h.tx - sx, dy = h.ty - sy;
   const L = Math.hypot(dx, dy), reach = C.REAL.REACH * c.boost.reach;
@@ -676,12 +679,14 @@ function updateHandReal(c, dt) {
   h.vx += ax * dt; h.vy += ay * dt;
   const sp = Math.hypot(h.vx, h.vy); if (sp > 12) { h.vx *= 12 / sp; h.vy *= 12 / sp; }
   h.x += h.vx * dt; h.y += h.vy * dt;
+  h.vz += (K * (tzd - h.z) - 2 * Z * Math.sqrt(K) * h.vz) * dt; h.z += h.vz * dt;
   if (overTable(h)) { h.y = TABLE_H + PADDLE_CLEAR; if (h.vy < 0) h.vy = 0; }
   h.stretch = Math.min(1, L / reach);
   h.roll += (h.rollTarget - h.roll) * Math.min(1, dt * 9);          // la muñeca gira rápido pero no de golpe
   h.pitchT = clamp(h.vy * 0.13, -0.75, 0.75);
   [h.pitch, h.pitchV] = spring(h.pitch || 0, h.pitchV || 0, h.pitchT, 240, 0.5, dt, -ay * 0.2);
-  [h.rz, h.rzV] = spring(h.rz || 0, h.rzV || 0, h.roll * 0.45, 180, 0.42, dt, ax * 0.18);
+  [h.rz, h.rzV] = spring(h.rz || 0, h.rzV || 0, 0, 180, 0.42, dt, ax * 0.18);                 // la cabeza cuelga de la muñeca
+  h.twist = h.roll * 0.62 + (h.yaw || 0) * 0.35;                                                   // giro sobre el mango (clics)
   [h.yaw, h.yawV] = spring(h.yaw || 0, h.yawV || 0, clamp(h.roll * 0.38 + h.vx * 0.04, -0.6, 0.6), 200, 0.6, dt);
   h.pitch = clamp(h.pitch, -1.2, 1.2); h.rz = clamp(h.rz, -1.3, 1.3);
 }
@@ -689,13 +694,13 @@ function updateHandReal(c, dt) {
 function tossServe(c, dt) {
   const b = G.ball, h = G.hand;
   if (!G.toss) {
-    b.x = c.x + c.hand * 0.3; b.y = TABLE_H + 0.12; b.z = h.z;
+    b.x = c.x + c.hand * 0.3; b.y = TABLE_H + 0.12; b.z = c.z - c.sign * 0.32;
     b.vx = b.vy = b.vz = 0; b.wx = b.wy = b.wz = 0;
     if (G.count <= 0 && (G.tossWait -= dt) <= 0) { G.toss = true; b.vy = 2.9; emit('toss', {}); }
     return;
   }
-  b.vy -= P.PHYS.grav * dt; b.y += b.vy * dt; b.z = h.z;
-  if (Math.hypot(b.x - h.x, b.y - h.y) < freeR(c) * 0.85 && Math.hypot(h.vx, h.vy) > 0.7) { freeHitReal(c, 0, true); return; }
+  b.vy -= P.PHYS.grav * dt; b.y += b.vy * dt;
+  if (Math.hypot(b.x - h.x, b.y - h.y, (b.z - h.z) * 0.7) < freeR(c) * 0.85 && Math.hypot(h.vx, h.vy, h.vz || 0) > 0.7) { freeHitReal(c, 0, true); return; }
   if (b.y < TABLE_H + 0.06 && b.vy < 0) { G.toss = false; G.tossWait = 0.35; }   // se le cae: vuelve a lanzarla
 }
 // efecto que trae la bola alrededor del eje lateral (liftado > 0)
@@ -726,8 +731,10 @@ function freeHitReal(c, d, serve) {
     return;
   }
   const vin = Math.abs(b.vz);
-  const drive = 7.2 * (1 - Math.exp(-swing / 5));   // el empuje crece rápido al principio y se satura: solo un swing exagerado la manda larga
-  let hs = (0.38 * vin + 1.1 + drive) * pad.speed * c.boost.str * (0.7 + 0.3 * q);   // rebote en la goma + empuje
+  const fwd = -c.sign * (h.vz || 0);                // >0 = la pala va hacia la mesa
+  const drive = 6.2 * (1 - Math.exp(-(swing + Math.max(0, fwd) * 1.6) / 5));   // empuje: crece rápido y se satura; solo un swing exagerado la manda larga
+  const cushion = fwd < 0 ? Math.min(2.2, -fwd * 0.9) : 0;                       // retirar la pala amortigua (bola lenta y corta)
+  let hs = Math.max(1.8, 0.3 * vin + 1.0 + drive - cushion) * pad.speed * c.boost.str * (0.7 + 0.3 * q);   // rebote en la goma + empuje
   const smash = b.y > TABLE_H + C.SMASH_H && (h.vy < -1.2 || swing > 3.4);
   if (smash) { hs = Math.max(hs, 7.2) * pad.smash; top = 25; }
   const power = clamp((hs - 2) / 7, 0, 1);

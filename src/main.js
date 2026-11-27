@@ -178,7 +178,7 @@ function startGame() {
   arena.setStage(resolveStage(settings.stage, arena.stage)); setAmbient(arena.stage);
   buildViews();
   newMatch(false, { mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal });
-  showRealTag();
+  showRealTag(); if (matchReal) camZoom = 0;   // el realista arranca en 1ª persona (la rueda la cambia)
 }
 function toMenu(keepRoom = false) {
   const wasOnline = G.online;
@@ -309,7 +309,7 @@ function startOnline(m) {
     online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
     firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal,
   });
-  showRealTag();
+  showRealTag(); if (matchReal) camZoom = 0;
   if (DEBUG === 'bot') G.chars[0].ai = true;
   refreshHUD();
 }
@@ -804,7 +804,12 @@ function updateAim() {
   raycaster.setFromCamera(ndc, camera);
   if (free() && screen === 'game') {
     // Mano libre: el ratón se proyecta sobre el plano vertical de la pala
-    handPlane.constant = -G.hand.z;
+    if (G.real && G.chars[0]) {
+      // Realista: la altura del cursor en pantalla también es profundidad (abajo = pegada al cuerpo, arriba = adelantada)
+      const c = G.chars[0], u = Math.max(0, Math.min(1, (0.9 - mouse.y / innerHeight) / 0.75));
+      G.hand.tdepth = 0.04 + 0.62 * u * u * (3 - 2 * u);
+      handPlane.constant = -(c.z - c.sign * (0.08 + G.hand.tdepth));
+    } else handPlane.constant = -G.hand.z;
     if (raycaster.ray.intersectPlane(handPlane, hitP)) { G.hand.tx = hitP.x; G.hand.ty = hitP.y; }
     return;
   }
@@ -1027,6 +1032,7 @@ function padGame(dt) {
     const reach = C.FREE_REACH * c.boost.reach;
     G.hand.tx = c.x + c.hand * 0.35 + sx * reach;
     G.hand.ty = 1.0 - sy * reach * 0.85;
+    G.hand.tdepth = 0.04 + 0.62 * Math.max(0, Math.min(1, 0.5 - sy * 0.6));   // stick arriba = pala adelantada
     G.hand.rollTarget = pad.held(BTN.RB) || pad.held(BTN.RT) ? 1 : pad.held(BTN.LB) || pad.held(BTN.LT) ? -1 : 0;
     return;
   }
