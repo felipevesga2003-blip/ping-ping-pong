@@ -279,6 +279,7 @@ function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) retur
 const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
   getLook: () => playLook(),
+  toast: msg => toast(msg, 'bad'),
   getConfig: () => ({ mode: settings.mode, bestOf: +settings.bestOf, target: +settings.target, public: settings.visibility === 'public', stage: resolveStage(settings.stage, arena.stage), realism: settings.realism }),
   onRoomInfo: r => lobby.setRoom(r),
   botLook: () => randomCpuLook(),

@@ -35,9 +35,7 @@
     }, 4000);
   });
 </script>
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
-</script>
+<!-- (el mapa de módulos se crea al cargar: ver el final de la página) -->
 </head>
 <body>
 <!-- ================= PANTALLA DE CARGA ================= -->
@@ -511,6 +509,28 @@
     document.getElementById('menu').classList.add('hidden');
   }
 </script>
-<script type="module" src="src/main.js"></script>
+<script>
+  // Siempre la última versión: GitHub Pages guarda los archivos 10 min en caché, así que pregunto (sin caché)
+  // la fecha de publicación y cargo todos los módulos del juego con esa marca. window.__BUILD sirve además
+  // para avisar en las salas online si dos jugadores tienen versiones distintas.
+  (function () {
+    var MODS = ["arena.js","audio.js","character.js","config.js","fanprops.js","fx.js","game.js","gamepad.js","lobby.js","main.js","models.js","net.js","online.js","physics.js","progress.js","referee.js","stages.js","ui.js","workshop.js"];
+    function boot(v) {
+      window.__BUILD = v;
+      var imports = { three: './vendor/three.module.js', 'three/addons/': './vendor/addons/' };
+      MODS.forEach(function (f) { imports['./src/' + f] = './src/' + f + '?v=' + v; });
+      var map = document.createElement('script'); map.type = 'importmap'; map.textContent = JSON.stringify({ imports: imports });
+      document.head.appendChild(map);
+      var main = document.createElement('script'); main.type = 'module'; main.src = './src/main.js?v=' + v;
+      document.body.appendChild(main);
+    }
+    var done = false, fallback = setTimeout(function () { if (!done) { done = true; boot('t' + Date.now()); } }, 2500);
+    fetch('./src/main.js?probe=' + Date.now(), { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      var lm = r.headers.get('last-modified') || r.headers.get('etag') || '';
+      var v = lm ? Math.abs(Array.from(lm).reduce(function (h, c) { return (h * 31 + c.charCodeAt(0)) | 0; }, 7)).toString(36) : 't' + Date.now();
+      if (!done) { done = true; clearTimeout(fallback); boot(v); }
+    }).catch(function () { if (!done) { done = true; clearTimeout(fallback); boot('t' + Date.now()); } });
+  })();
+</script>
 </body>
 </html>

@@ -23,7 +23,7 @@ export function createOnline(cb) {
       if (state === 'waiting') { setCode(info); status(waitingText(), 'wait'); announce(); }
     },
     onPeerOpen: id => {
-      if (!S.isHost) { S.connected = true; net.send({ t: 'hello', look: cb.getLook() }); status('¡Conectado! Entrando en la sala…', 'wait'); }
+      if (!S.isHost) { S.connected = true; net.send({ t: 'hello', look: cb.getLook(), build: window.__BUILD }); status('¡Conectado! Entrando en la sala…', 'wait'); }
       startPing();
     },
     onData: (id, m) => handle(id, m),
@@ -53,7 +53,7 @@ export function createOnline(cb) {
     if (m.t === 'ping') { net.send({ t: 'pong', ts: m.ts }, id); return; }
     if (m.t === 'pong') { const r = performance.now() - m.ts; const o = rtts.get(id) || r; rtts.set(id, o * 0.7 + r * 0.3); S.rtt = Math.max(...rtts.values()); return; }
     if (S.isHost) {
-      if (m.t === 'hello') return admit(id, m.look);
+      if (m.t === 'hello') { if (m.build && window.__BUILD && m.build !== window.__BUILD) versionWarn(true); return admit(id, m.look); }
       const slot = peerSlot.get(id); if (slot === undefined) return;
       if (m.t === 'look') { const p = S.players.find(x => x.slot === slot); if (p) p.look = m.look; broadcastRoster(); return; }
       m.from = slot;                                     // el anfitrión sella el remitente
@@ -62,7 +62,7 @@ export function createOnline(cb) {
       return;
     }
     switch (m.t) {
-      case 'welcome': S.slot = m.slot; S.cfg = m.cfg; S.players = m.players; status(guestText(), 'ok'); renderRoom(); cb.onRoster(S.players); return;
+      case 'welcome': S.slot = m.slot; S.cfg = m.cfg; S.players = m.players; status(guestText(), 'ok'); if (m.build && window.__BUILD && m.build !== window.__BUILD) versionWarn(false); renderRoom(); cb.onRoster(S.players); return;
       case 'roster': S.players = m.players; S.cfg = m.cfg; renderRoom(); cb.onRoster(S.players); return;
       case 'full': status('Esa sala ya está llena.', 'err'); return;
       case 'start': S.inMatch = true; S.players = m.players; cb.onStart(m); return;
@@ -70,6 +70,13 @@ export function createOnline(cb) {
     }
   }
 
+  // versiones distintas = reglas distintas (p. ej. quién saca): mejor avisar que dejar que el partido se rompa
+  function versionWarn(host) {
+    const msg = host ? 'Un jugador tiene otra versión del juego. Que todos recarguen la página (Ctrl + F5) antes de empezar.'
+      : 'Tienes una versión distinta a la del anfitrión. Recargad la página los dos (Ctrl + F5) antes de empezar.';
+    status(msg, 'err');
+    if (cb.toast) cb.toast(msg);
+  }
   function freeSlots() {
     const order = S.cfg.mode === '2v2' ? [1, 2, 3] : [1];
     return order.filter(s => !S.players.some(p => p.slot === s && !p.bot));
@@ -81,7 +88,7 @@ export function createOnline(cb) {
     S.players = S.players.filter(p => p.slot !== slot);
     S.players.push({ slot, look, peer: id });
     peerSlot.set(id, slot);
-    net.send({ t: 'welcome', slot, cfg: S.cfg, players: pub() }, id);
+    net.send({ t: 'welcome', slot, cfg: S.cfg, players: pub(), build: window.__BUILD }, id);
     broadcastRoster();
     cb.blip();
   }
