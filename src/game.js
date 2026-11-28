@@ -70,6 +70,7 @@ export function newMatch(demo, opts = {}) {
     if (opts.boosts && opts.boosts[i]) c.boost = { ...c.boost, ...opts.boosts[i] };
     c.x = homeX(c);
   });
+  G.serveOrders = opts.serveOrders || null;
   G.firstServer = opts.firstServer ?? (Math.random() < 0.5 ? 0 : 1);
   G.gameFirstServer = G.firstServer;
   if (opts.target) G.target = opts.target;
@@ -96,6 +97,8 @@ function targetPts() { return G.demo ? 11 : G.target; }
 // Orden de saque: alterna equipos empezando por firstServer; en dobles rota A1 → B1 → A2 → B2
 function serveSeq() {
   if (!is2v2()) return G.firstServer === 0 ? [0, 1] : [1, 0];
+  // online: el orden viene de los huecos globales de la sala (igual para todos), traducido a índices locales
+  if (G.serveOrders) return G.serveOrders[G.firstServer];
   return G.firstServer === 0 ? [0, 1, 2, 3] : [1, 0, 3, 2];
 }
 function serverFor() {

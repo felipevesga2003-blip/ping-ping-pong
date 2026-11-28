@@ -270,6 +270,11 @@ function localOf(s) {
   if (teamOfSlot(s) === teamOfSlot(g)) return 2;
   return s < 2 ? 1 : 3;
 }
+// Orden de saque en dobles según los huecos globales: equipo que empieza → su 1er jugador, 1º rival, su 2º, 2º rival
+function onlineServeOrders() {
+  const seqFor = gt => { const a = gt === 0 ? [0, 2] : [1, 3], b = gt === 0 ? [1, 3] : [0, 2]; return [a[0], b[0], a[1], b[1]].map(localOf); };
+  return { 0: seqFor(myFrame()), 1: seqFor(1 - myFrame()) };   // clave = equipo LOCAL que empieza sacando
+}
 function globalOf(li) { for (let s = 0; s < 4; s++) if (localOf(s) === li) return s; return li; }
 const myFrame = () => teamOfSlot(online.S.slot);
 const online = createOnline({
@@ -313,7 +318,7 @@ function startOnline(m) {
   buildViews();
   newMatch(false, {
     online: true, mode: cfg.mode, bestOf: cfg.bestOf, target: cfg.target,
-    firstServer: m.firstServer === myFrame() ? 0 : 1, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal,
+    firstServer: m.firstServer === myFrame() ? 0 : 1, serveOrders: cfg.mode === '2v2' ? onlineServeOrders() : null, ctrl: roster.map(p => p.ctrl), paddles: paddlesOf(), pads: padsOf(), boosts: boostsOf(), real: matchReal,
   });
   realAids = false; showRealTag(); if (matchReal) camZoom = 0;
   if (DEBUG === 'bot') G.chars[0].ai = true;
