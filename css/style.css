@@ -809,3 +809,8 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .turn-mark path { fill: var(--team1, var(--yellow)); stroke: var(--ink); stroke-width: 3.2; stroke-linejoin: round; }
 .turn-mark span { padding: 3px 9px 2px; background: var(--ink); color: var(--yellow); font: 700 9.5px var(--jost); letter-spacing: .28em; text-transform: uppercase; }
 @keyframes tmBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+/* «Sigues tú»: triángulo hueco, algo más pequeño y discreto */
+.turn-mark.next svg { width: 26px; height: 20px; }
+.turn-mark.next path { fill: var(--paper); stroke: var(--team1, var(--yellow)); stroke-width: 5; paint-order: stroke; filter: drop-shadow(0 0 0 var(--ink)); }
+.turn-mark.next span { background: transparent; color: var(--ink); text-shadow: 0 0 4px var(--paper), 0 0 8px var(--paper); }

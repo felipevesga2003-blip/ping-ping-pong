@@ -1318,7 +1318,7 @@ function drawOverlay() {
   if (free() && aidsOn()) {
     // Mano libre: dónde cruzará la bola el plano de la pala
     const h = G.hand;
-    if (G.phase === 'rally' && b.lastHitter === 1) {
+    if (G.phase === 'rally' && b.lastHitter === 1 && myHitTurn()) {
       const r = P.simToPlane(b, h.z, c.sign, 0, b.count === 1, 1.2);
       if (r && r.ok && r.t < 1.1) {
         const s = toScreen(tmpV.set(r.x, r.y, r.z));
@@ -1335,7 +1335,7 @@ function drawOverlay() {
     }
     return;
   }
-  if (aidsOn() && G.phase === 'rally' && b.lastHitter === 1 && c.swing <= 0 && !c.pending) {
+  if (aidsOn() && G.phase === 'rally' && b.lastHitter === 1 && myHitTurn() && c.swing <= 0 && !c.pending) {
     const r = P.simToPlane(b, paddleZ(c), c.sign, 0, b.count === 1, 1.2);
     if (r && r.ok && r.t < 1.1) {
       const s = toScreen(tmpV.set(r.x, r.y, r.z));
@@ -1360,58 +1360,64 @@ function drawOverlay() {
 }
 
 // ---------- Marcador de turno (dobles) ----------
-// Triángulo del color del equipo sobre quien debe golpear (o sacar): siempre de cara a la cámara, flota,
-// se desliza de un jugador a otro con un pequeño «pop» y se desvanece entre puntos. En 1ª persona, si el
-// turno es tuyo, aparece arriba en pantalla («Tu turno») porque sobre tu cabeza no lo verías.
-const turnMark = (() => {
-  const tri = (w, h, r) => { const s = new THREE.Shape(); s.moveTo(-w + r, h); s.lineTo(w - r, h); s.quadraticCurveTo(w, h, w - r * 0.6, h - r); s.lineTo(r * 0.5, -h + r * 0.6); s.quadraticCurveTo(0, -h, -r * 0.5, -h + r * 0.6); s.lineTo(-w + r * 0.6, h - r); s.quadraticCurveTo(-w, h, -w + r, h); return new THREE.ShapeGeometry(s, 6); };
+// Dos marcadores: el PRINCIPAL (triángulo relleno del color del equipo) sobre quien debe golpear ahora y el
+// SECUNDARIO (hueco, más pequeño) sobre quien responderá después — medio turno de antelación para que nadie
+// se pierda. Siempre de cara a la cámara, flotan, se deslizan al cambiar el turno (con «pop») y se desvanecen
+// entre puntos. En 1ª persona, si eres tú, aparece arriba en pantalla («Tu turno» / «Sigues tú»).
+function makeTurnMark(hollow) {
+  const tri = (w, h, r) => { const sh = new THREE.Shape(); sh.moveTo(-w + r, h); sh.lineTo(w - r, h); sh.quadraticCurveTo(w, h, w - r * 0.6, h - r); sh.lineTo(r * 0.5, -h + r * 0.6); sh.quadraticCurveTo(0, -h, -r * 0.5, -h + r * 0.6); sh.lineTo(-w + r * 0.6, h - r); sh.quadraticCurveTo(-w, h, -w + r, h); return new THREE.ShapeGeometry(sh, 6); };
   const g = new THREE.Group();
-  const mk = (geo, col, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false })); m.position.z = z; m.renderOrder = 20; g.add(m); return m; };
-  const ink = mk(tri(0.105, 0.085, 0.022), 0x111111, -0.002);
-  const fill = mk(tri(0.078, 0.062, 0.016), 0xffc629, 0);
-  const glint = mk(tri(0.034, 0.02, 0.008), 0xffffff, 0.001); glint.position.set(-0.022, 0.038, 0.001); glint.material.opacity = 0.5;
+  const mk = (geo, col, z, op = 1) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false })); m.position.z = z; m.renderOrder = 20; m.userData.op = op; g.add(m); return m; };
+  const layers = [mk(tri(0.105, 0.085, 0.022), 0x111111, -0.002)];
+  const team = mk(tri(0.078, 0.062, 0.016), 0xffc629, 0);
+  layers.push(team);
+  if (hollow) layers.push(mk(tri(0.046, 0.035, 0.01), 0xf2eadb, 0.001));                     // centro de papel = «hueco»
+  else { const gl = mk(tri(0.034, 0.02, 0.008), 0xffffff, 0.001, 0.45); gl.position.set(-0.022, 0.038, 0.001); layers.push(gl); }
   g.visible = false; scene.add(g);
-  return { g, ink, fill, glint };
-})();
-let tmAlpha = 0, tmIdx = -1, tmPop = 0, tmOwn = 0;
-const tmTarget = new THREE.Vector3();
-function updateTurnMark(dt) {
-  let idx = -1;
-  if (screen !== 'menu' && !G.demo && G.chars.length === 4) {
-    if (G.phase === 'serve') idx = G.server;
-    else if (G.phase === 'rally' && G.ball.lastHitter >= 0) idx = G.turn[1 - G.ball.lastHitter];
-  }
-  const fpMine = fpActive && idx === 0;
-  const want = idx >= 0 && !fpMine ? 1 : 0;
+  return { g, team, layers, alpha: 0, idx: -1, pop: 0, own: 0, bob: 0, base: hollow ? 0.72 : 1, maxOp: hollow ? 0.88 : 1, tgt: new THREE.Vector3() };
+}
+const turnMarks = [makeTurnMark(false), makeTurnMark(true)];
+function stepTurnMark(M, idx, show, dt, phase) {
   const c = idx >= 0 ? G.chars[idx] : null, v = idx >= 0 ? views[idx] : null;
   if (c && v) {
-    tmTarget.set(c.x, (v.topY || 1.3) + 0.2, c.z);
-    if (idx !== tmIdx) {
-      if (tmIdx < 0 || tmAlpha < 0.05) turnMark.g.position.copy(tmTarget);   // aparece directamente encima
-      tmPop = 1; tmIdx = idx;
-      turnMark.fill.material.color.setHex(COLS[idx % 2]);
+    M.tgt.set(c.x, (v.topY || 1.3) + 0.2, c.z);
+    if (idx !== M.idx) {
+      if (M.idx < 0 || M.alpha < 0.05) M.g.position.copy(M.tgt);   // aparece directamente encima
+      M.pop = 1; M.idx = idx;
+      M.team.material.color.setHex(COLS[idx % 2]);
     }
-    turnMark.g.position.lerp(tmTarget, 1 - Math.exp(-13 * dt));
-  } else if (idx < 0) tmIdx = -1;
-  tmAlpha += (want - tmAlpha) * Math.min(1, dt * 9);
-  tmPop *= Math.exp(-6 * dt);
-  const vis = tmAlpha > 0.01;
-  turnMark.g.visible = vis;
-  if (vis) {
-    turnMark.g.quaternion.copy(camera.quaternion);
-    const bob = Math.sin(time * 3.2) * 0.022;
-    turnMark.g.position.y += bob - (turnMark.g.userData.bob || 0); turnMark.g.userData.bob = bob;
-    // sobre ti mismo la cámara está muy cerca: más pequeño y algo translúcido para no tapar la mesa
-    const own = tmIdx === 0 ? 1 : 0;
-    tmOwn += (own - tmOwn) * Math.min(1, dt * 8);
-    const sc = (0.75 + 0.25 * tmAlpha) * (1 + 0.35 * Math.sin(tmPop * Math.PI)) * (1 - 0.3 * tmOwn)   // «pop» al cambiar de jugador
-      * Math.max(0.8, Math.min(2.3, camera.position.distanceTo(turnMark.g.position) / 2.2));   // tamaño en pantalla parecido cerca o lejos
-    turnMark.g.scale.setScalar(sc);
-    const op = tmAlpha * (1 - 0.25 * tmOwn);
-    turnMark.ink.material.opacity = op; turnMark.fill.material.opacity = op; turnMark.glint.material.opacity = 0.45 * tmAlpha;
-  } else turnMark.g.userData.bob = 0;
-  $('turnMark').classList.toggle('on', fpMine && screen === 'game');
+    M.g.position.lerp(M.tgt, 1 - Math.exp(-13 * dt));
+  } else if (idx < 0) M.idx = -1;
+  M.alpha += ((show && c ? 1 : 0) - M.alpha) * Math.min(1, dt * 9);
+  M.pop *= Math.exp(-6 * dt);
+  M.g.visible = M.alpha > 0.01;
+  if (!M.g.visible) { M.bob = 0; return; }
+  M.g.quaternion.copy(camera.quaternion);
+  const bob = Math.sin(time * 3.2 + phase) * 0.022;
+  M.g.position.y += bob - M.bob; M.bob = bob;
+  // sobre ti mismo la cámara está muy cerca: más pequeño y algo translúcido para no tapar la mesa
+  M.own += ((M.idx === 0 ? 1 : 0) - M.own) * Math.min(1, dt * 8);
+  const sc = M.base * (0.75 + 0.25 * M.alpha) * (1 + 0.35 * Math.sin(M.pop * Math.PI)) * (1 - 0.3 * M.own)
+    * Math.max(0.8, Math.min(2.3, camera.position.distanceTo(M.g.position) / 2.2));   // tamaño en pantalla parecido cerca o lejos
+  M.g.scale.setScalar(sc);
+  const op = M.alpha * M.maxOp * (1 - 0.25 * M.own);
+  for (const L of M.layers) L.material.opacity = op * L.userData.op;
 }
+function updateTurnMark(dt) {
+  let now = -1, next = -1;
+  if (screen !== 'menu' && !G.demo && G.chars.length === 4) {
+    if (G.phase === 'serve') { now = G.server; next = G.turn[1 - G.chars[G.server].team]; }          // quién saca y quién recibe
+    else if (G.phase === 'rally' && G.ball.lastHitter >= 0) { now = G.turn[1 - G.ball.lastHitter]; next = G.turn[G.ball.lastHitter]; }
+  }
+  stepTurnMark(turnMarks[0], now, now >= 0 && !(fpActive && now === 0), dt, 0);
+  stepTurnMark(turnMarks[1], next, next >= 0 && next !== now && !(fpActive && next === 0), dt, 1.6);
+  const tm = $('turnMark'), mine = screen === 'game' && fpActive && now === 0, soon = screen === 'game' && fpActive && next === 0 && now !== 0;
+  tm.classList.toggle('on', mine || soon); tm.classList.toggle('next', soon && !mine);
+  const lbl = mine ? 'Tu turno' : 'Sigues tú';
+  if (tm.lastChild.textContent !== lbl && (mine || soon)) tm.lastChild.textContent = lbl;
+}
+// en dobles, ¿me toca golpear a mí? (si no, fuera anillos y diana: solo confundirían)
+const myHitTurn = () => G.chars.length !== 4 || G.turn[0] === 0;
 
 // ---------- Bucle ----------
 const fadeO = [1, 1, 1, 1];
@@ -1482,7 +1488,7 @@ function frame(now) {
   updateTurnMark(dt);
   updateAim();
   const human = screen !== 'menu' && !G.demo;
-  fx.reticle.visible = human && !free() && (G.phase === 'rally' || (G.phase === 'serve' && G.server === 0));
+  fx.reticle.visible = human && !free() && ((G.phase === 'rally' && (b.lastHitter !== 1 || myHitTurn())) || (G.phase === 'serve' && G.server === 0));
   fx.reticle.position.set(G.aim.x, C.TABLE_H + 0.002, G.aim.z);
   let landOn = false;
   if (human && aidsOn() && G.phase === 'rally' && b.lastHitter === 1 && b.count === 0) {
