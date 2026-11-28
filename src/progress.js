@@ -37,7 +37,7 @@ export const MILESTONES = { 3: 'Experto', 5: 'Maestro' };
 const newPaddle = (i) => ({ name: `Pala ${i + 1}`, type: 'balanced', color: PADDLE_COLORS[[0, 2, 3][i]], wood: ['#e3b47a', '#c99a5e', '#f0d6a8'][i], up: { speed: 0, spin: 0, ctrl: 0, smash: 0 } });
 function fresh() {
   return {
-    v: 1, named: false, coins: WELCOME_COINS, earned: 0, owned: {},
+    v: 1, named: false, coins: WELCOME_COINS, welcome200: true, earned: 0, owned: {},
     skills: { agi: 0, str: 0, ref: 0, reach: 0 },
     paddles: [0, 1, 2].map(newPaddle), active: 0,
     stats: { played: 0, wins: 0, losses: 0, best: 0 },
@@ -52,6 +52,8 @@ try {
     P.skills = { ...fresh().skills, ...(s.skills || {}) };
     P.stats = { ...fresh().stats, ...(s.stats || {}) };
     P.paddles = [0, 1, 2].map(i => ({ ...newPaddle(i), ...((s.paddles || [])[i] || {}), up: { ...newPaddle(i).up, ...(((s.paddles || [])[i] || {}).up || {}) } }));
+    // una sola vez: los perfiles que ya existían también arrancan con al menos el saldo de bienvenida (no se quita a quien tiene más)
+    if (!s.welcome200) { P.coins = Math.max(P.coins, WELCOME_COINS); P.welcome200 = true; localStorage.setItem(KEY, JSON.stringify(P)); }
   }
 } catch (e) { /* sin storage */ }
 
