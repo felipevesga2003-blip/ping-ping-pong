@@ -140,6 +140,7 @@ function buildViews() {
     }
     const v = createCharacter(look, { rotationY: team === 0 ? Math.PI : 0 });
     scene.add(v.root); views[i] = v;
+    v.topY = new THREE.Box3().setFromObject(v.root).max.y - v.root.position.y;   // para el marcador de turno
   });
   if (fpActive) views[0].setFirstPerson(true);
   arena.setTeams(teamShirts[0], teamShirts[1]);
@@ -1358,6 +1359,60 @@ function drawOverlay() {
   }
 }
 
+// ---------- Marcador de turno (dobles) ----------
+// Triángulo del color del equipo sobre quien debe golpear (o sacar): siempre de cara a la cámara, flota,
+// se desliza de un jugador a otro con un pequeño «pop» y se desvanece entre puntos. En 1ª persona, si el
+// turno es tuyo, aparece arriba en pantalla («Tu turno») porque sobre tu cabeza no lo verías.
+const turnMark = (() => {
+  const tri = (w, h, r) => { const s = new THREE.Shape(); s.moveTo(-w + r, h); s.lineTo(w - r, h); s.quadraticCurveTo(w, h, w - r * 0.6, h - r); s.lineTo(r * 0.5, -h + r * 0.6); s.quadraticCurveTo(0, -h, -r * 0.5, -h + r * 0.6); s.lineTo(-w + r * 0.6, h - r); s.quadraticCurveTo(-w, h, -w + r, h); return new THREE.ShapeGeometry(s, 6); };
+  const g = new THREE.Group();
+  const mk = (geo, col, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false })); m.position.z = z; m.renderOrder = 20; g.add(m); return m; };
+  const ink = mk(tri(0.105, 0.085, 0.022), 0x111111, -0.002);
+  const fill = mk(tri(0.078, 0.062, 0.016), 0xffc629, 0);
+  const glint = mk(tri(0.034, 0.02, 0.008), 0xffffff, 0.001); glint.position.set(-0.022, 0.038, 0.001); glint.material.opacity = 0.5;
+  g.visible = false; scene.add(g);
+  return { g, ink, fill, glint };
+})();
+let tmAlpha = 0, tmIdx = -1, tmPop = 0, tmOwn = 0;
+const tmTarget = new THREE.Vector3();
+function updateTurnMark(dt) {
+  let idx = -1;
+  if (screen !== 'menu' && !G.demo && G.chars.length === 4) {
+    if (G.phase === 'serve') idx = G.server;
+    else if (G.phase === 'rally' && G.ball.lastHitter >= 0) idx = G.turn[1 - G.ball.lastHitter];
+  }
+  const fpMine = fpActive && idx === 0;
+  const want = idx >= 0 && !fpMine ? 1 : 0;
+  const c = idx >= 0 ? G.chars[idx] : null, v = idx >= 0 ? views[idx] : null;
+  if (c && v) {
+    tmTarget.set(c.x, (v.topY || 1.3) + 0.2, c.z);
+    if (idx !== tmIdx) {
+      if (tmIdx < 0 || tmAlpha < 0.05) turnMark.g.position.copy(tmTarget);   // aparece directamente encima
+      tmPop = 1; tmIdx = idx;
+      turnMark.fill.material.color.setHex(COLS[idx % 2]);
+    }
+    turnMark.g.position.lerp(tmTarget, 1 - Math.exp(-13 * dt));
+  } else if (idx < 0) tmIdx = -1;
+  tmAlpha += (want - tmAlpha) * Math.min(1, dt * 9);
+  tmPop *= Math.exp(-6 * dt);
+  const vis = tmAlpha > 0.01;
+  turnMark.g.visible = vis;
+  if (vis) {
+    turnMark.g.quaternion.copy(camera.quaternion);
+    const bob = Math.sin(time * 3.2) * 0.022;
+    turnMark.g.position.y += bob - (turnMark.g.userData.bob || 0); turnMark.g.userData.bob = bob;
+    // sobre ti mismo la cámara está muy cerca: más pequeño y algo translúcido para no tapar la mesa
+    const own = tmIdx === 0 ? 1 : 0;
+    tmOwn += (own - tmOwn) * Math.min(1, dt * 8);
+    const sc = (0.75 + 0.25 * tmAlpha) * (1 + 0.35 * Math.sin(tmPop * Math.PI)) * (1 - 0.3 * tmOwn)   // «pop» al cambiar de jugador
+      * Math.max(0.8, Math.min(2.3, camera.position.distanceTo(turnMark.g.position) / 2.2));   // tamaño en pantalla parecido cerca o lejos
+    turnMark.g.scale.setScalar(sc);
+    const op = tmAlpha * (1 - 0.25 * tmOwn);
+    turnMark.ink.material.opacity = op; turnMark.fill.material.opacity = op; turnMark.glint.material.opacity = 0.45 * tmAlpha;
+  } else turnMark.g.userData.bob = 0;
+  $('turnMark').classList.toggle('on', fpMine && screen === 'game');
+}
+
 // ---------- Bucle ----------
 const fadeO = [1, 1, 1, 1];
 let aura = null;   // { id: golpe, k: intensidad, color }
@@ -1424,6 +1479,7 @@ function frame(now) {
   fx.spinAura(ballPos, { x: b.wx, y: b.wy, z: b.wz }, aura ? aura.k * Math.min(1, om2 / 70) : 0, aura ? aura.color : 0xffffff);
 
   updateCamera(dt);
+  updateTurnMark(dt);
   updateAim();
   const human = screen !== 'menu' && !G.demo;
   fx.reticle.visible = human && !free() && (G.phase === 'rally' || (G.phase === 'serve' && G.server === 0));

@@ -800,3 +800,12 @@ body.nocursor, body.nocursor * { cursor: none !important; }
 .outfit:hover .o-stage { background: radial-gradient(circle at 50% 60%, rgba(232, 48, 31, .9) 0 31px, transparent 32px); }
 .outfit:has(.lock-badge) .o-thumb.on { filter: saturate(.75); }
 .outfit b { margin-top: 2px; }
+
+/* Marcador de turno en 1ª persona (dobles): bajo el marcador, entra deslizándose y flota */
+.turn-mark { position: absolute; top: 78px; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none;
+  opacity: 0; transform: translate(-50%, -10px) scale(.85); transition: opacity .22s var(--ease), transform .38s var(--snap); }
+.turn-mark.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.turn-mark svg { width: 34px; height: 26px; overflow: visible; animation: tmBob 1.9s ease-in-out infinite; filter: drop-shadow(0 3px 0 rgba(17, 17, 17, .18)); }
+.turn-mark path { fill: var(--team1, var(--yellow)); stroke: var(--ink); stroke-width: 3.2; stroke-linejoin: round; }
+.turn-mark span { padding: 3px 9px 2px; background: var(--ink); color: var(--yellow); font: 700 9.5px var(--jost); letter-spacing: .28em; text-transform: uppercase; }
+@keyframes tmBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
