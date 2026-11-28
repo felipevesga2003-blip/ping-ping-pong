@@ -8,7 +8,7 @@ import { DEFAULT_LOOK, OUTFITS, PADDLE_COLORS } from './character.js';
 const KEY = 'ppp-profile';
 export const PRICE = 5;                 // casi todo cuesta lo que da ganar un partido normal
 export const MAX_LV = 5;
-export const WELCOME_COINS = 10;
+export const WELCOME_COINS = 200;   // de momento, saldo inicial generoso para la gente nueva
 
 // Lo que viene de serie; el resto se compra
 export const FREE = {
